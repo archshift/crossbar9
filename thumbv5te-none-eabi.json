@@ -1,0 +1,20 @@
+{
+    "arch": "arm",
+    "cpu": "arm946e-s",
+    "disable-redzone": true,
+    "executables": true,
+    "llvm-target": "thumbv5te-none-eabi",
+    "morestack": false,
+    "os": "none",
+    "relocation-model": "static",
+    "target-endian": "little",
+    "target-pointer-width": "32",
+    "no-compiler-rt": true,
+    "pre-link-args": [
+        "-nostdlib",
+        "-Tlayout.ld"
+    ],
+    "post-link-args": [
+        "-lm", "-lc", "-lgcc", "-lc", "-lsysbase", "-lc"
+    ]
+}
