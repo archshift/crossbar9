@@ -3,6 +3,8 @@
 #![no_main]
 
 extern crate rlibc;
+mod io;
+pub mod interrupts;
 pub mod intrinsics;
 mod test;
 

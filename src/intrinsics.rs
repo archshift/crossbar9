@@ -2,6 +2,7 @@
 extern fn eh_personality() { }
 
 #[lang = "panic_fmt"]
+#[no_mangle]
 fn panic_fmt() -> ! {
 	panic_3ds();
 }
