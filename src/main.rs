@@ -1,14 +1,16 @@
-#![feature(lang_items, core_intrinsics)]
+#![feature(lang_items, core_intrinsics, conservative_impl_trait)]
 #![no_std]
 #![no_main]
 
 extern crate rlibc;
+
+mod gfx;
 mod io;
 pub mod interrupts;
 pub mod intrinsics;
-mod test;
 
 #[no_mangle]
 pub extern fn main() {
-    test::test();
+    gfx::clear_screen(0xFF, 0xFF, 0xFF);
+    gfx::log(b"Hello, world!");
 }
