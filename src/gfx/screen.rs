@@ -18,9 +18,8 @@ unsafe fn draw_pixel(fb_addr: u32, pos: (usize, usize), r: u8, g: u8, b: u8) {
 
 unsafe fn blit_(fb_addr: u32, pos: (usize, usize), bmp: &Bitmap3) {
     let mut width = bmp.rect.0;
-    let mut bytes = bmp.bytes();
     let mut curr_pixel = 0;
-    while let (Some(r), Some(g), Some(b)) = (bytes.next(), bytes.next(), bytes.next()) {
+    for (r, g, b) in bmp.bytes() {
         draw_pixel(fb_addr, (pos.0 + curr_pixel % width, pos.1 + curr_pixel / width), r, g, b);
         curr_pixel += 1;
     }

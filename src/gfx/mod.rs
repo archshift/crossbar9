@@ -4,6 +4,31 @@ mod text;
 pub use self::screen::*;
 pub use self::text::*;
 
+pub struct RgbIter<'a> {
+    index: usize,
+    slice: &'a [u8],
+    row_size: usize,
+    rect_width: usize,
+}
+
+impl<'a> Iterator for RgbIter<'a> {
+    type Item = (u8, u8, u8);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let mut index = self.index;
+        while index + 3 <= self.slice.len() {
+            self.index += 3;
+            if index % self.row_size < self.rect_width {
+                return Some((self.slice[index],
+                             self.slice[index+1],
+                             self.slice[index+2]))
+            }
+            index += 3;
+        }
+        None
+    }
+}
+
 pub struct Bitmap3<'a> {
     bytes: &'a [u8],
     rect: (usize, usize),
@@ -20,6 +45,8 @@ impl<'a> Bitmap3<'a> {
         // last byte: first_byte + extra_rows*row_size + extra_columns
         let last_byte = first_byte + 3 * ((h - 1) * parent_row_size + w);
 
+        assert!((last_byte - first_byte) % 3 == 0);
+
         Bitmap3 {
             bytes: &self.bytes[first_byte..last_byte],
             rect: rect,
@@ -27,12 +54,15 @@ impl<'a> Bitmap3<'a> {
         }
     }
 
-    pub fn bytes<'b>(&'b self) -> impl Iterator<Item=u8> + 'b {
+    pub fn bytes(&self) -> RgbIter {
         let row_size = 3 * (self.rect.0 + self.skip_pixels);
-        let rect_size = 3 * self.rect.0;
+        let rect_width = 3 * self.rect.0;
 
-        self.bytes.iter().enumerate()
-            .filter(move |&(n, x)| n % row_size < rect_size)
-            .map(|(n, x)| *x)
+        RgbIter {
+            index: 0,
+            slice: self.bytes,
+            row_size: row_size,
+            rect_width: rect_width,
+        }
     }
 }
