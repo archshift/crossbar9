@@ -9,5 +9,10 @@ lto = true
 
 [dependencies]
 rlibc = "1.0"
+
+[dependencies.bitutils]
+git = "https://github.com/archshift/bitutils-rs"
+default-features = false
+
 [build-dependencies]
 gcc = "0.3.25"
