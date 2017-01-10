@@ -3,7 +3,7 @@
 TARGET=thumbv5te-none-eabi
 
 export CC=arm-none-eabi-gcc
-multirust run nightly cargo build --release --target $TARGET || exit
+rustup run nightly xargo build --release || exit
 
 TARGET_DIR="./target/${TARGET}/release"
 TARGET_ELF="${TARGET_DIR}/3dstest"

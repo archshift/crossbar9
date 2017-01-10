@@ -1,3 +1,6 @@
+[build]
+target = "thumbv5te-none-eabi"
+
 [target.thumbv5te-none-eabi]
 linker = "arm-none-eabi-gcc"
 ar = "arm-none-eabi-ar"
