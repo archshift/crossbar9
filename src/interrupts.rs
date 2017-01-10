@@ -124,3 +124,18 @@ pub extern fn handle_irq() {
 pub extern fn handle_swi(swi_index: u32) {
     panic!("Software interrupts not yet handled!");
 }
+
+#[no_mangle]
+pub extern fn handle_und(addr: u32) {
+    panic!("Undefined instruction @ 0x{:X}!", addr);
+}
+
+#[no_mangle]
+pub extern fn handle_pre() {
+    panic!("Prefetch abort!");
+}
+
+#[no_mangle]
+pub extern fn handle_dta(addr: u32) {
+    panic!("Data abort @ 0x{:X}!", addr);
+}

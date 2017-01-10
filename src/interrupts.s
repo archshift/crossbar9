@@ -16,6 +16,9 @@
 .extern panic_3ds
 .extern handle_irq
 .extern handle_swi
+.extern handle_und
+.extern handle_pre
+.extern handle_dta
 
 wrap_handle_irq:
     sub lr, lr, #4
@@ -49,15 +52,21 @@ wrap_handle_swi:
     ldmfd sp!, {r0-r3, r12, pc}^
 
 wrap_handle_und:
-    blx panic_3ds
+    stmfd sp!, {r0-r3, r12, lr}
+    sub r0, lr, #4 ;; addr = LR - 4
+    blx handle_und
+    ldmfd sp!, {r0-r3, r12, pc}^
     movs pc, lr
 
 wrap_handle_pre:
-    blx panic_3ds
+    blx handle_pre
     subs pc, lr, #4
 
 wrap_handle_dta:
-    blx panic_3ds
+    stmfd sp!, {r0-r3, r12, lr}
+    sub r0, lr, #8 ;; addr = LR - 4
+    blx handle_dta
+    ldmfd sp!, {r0-r3, r12, pc}^
     subs pc, lr, #8
 
 enable_interrupts:
