@@ -16,6 +16,6 @@
         "-Tlayout.ld"
     ],
     "post-link-args": [
-        "-lm", "-lc", "-lgcc", "-lc", "-lsysbase", "-lc"
+        "-lgcc"
     ]
 }

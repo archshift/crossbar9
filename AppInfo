@@ -37,8 +37,8 @@
 #  0b100000/0x20 => Use this fix for the top screen
 #---------------------------------------------------------------------------------
 
-APP_TITLE = crossbar9-test 
-APP_DESCRIPTION = Test template for Rust on the 3DS
+APP_TITLE = 3dstest
+APP_DESCRIPTION = test
 APP_AUTHOR = archshift
 
 # PAYLOAD_PATH = //payload.bin

@@ -2,6 +2,7 @@
 #![no_std]
 #![no_main]
 
+extern crate rlibc;
 pub mod intrinsics;
 mod test;
 

@@ -1,5 +1,5 @@
 [package]
-name = "crossbar9"
+name = "3dstest"
 version = "0.1.0"
 authors = ["archshift <gh@archshift.com>"]
 build = "build.rs"
@@ -7,5 +7,7 @@ build = "build.rs"
 [profile.release]
 lto = true
 
+[dependencies]
+rlibc = "1.0"
 [build-dependencies]
 gcc = "0.3.25"
