@@ -2,10 +2,18 @@
 
 TARGET=thumbv5te-none-eabi
 
-export CC=arm-none-eabi-gcc
-rustup run nightly xargo build --release || exit
+RELMODE="$1"
+if [ "$1" = "debug" ]; then
+    RELMODE_FLAG=""
+else
+    RELMODE="release"
+    RELMODE_FLAG="--release"
+fi
 
-TARGET_DIR="./target/${TARGET}/release"
+export CC=arm-none-eabi-gcc
+rustup run nightly xargo build $RELMODE_FLAG || exit
+
+TARGET_DIR="./target/${TARGET}/${RELMODE}"
 TARGET_ELF="${TARGET_DIR}/3dstest"
 TARGET_BIN="${TARGET_DIR}/3dstest.bin"
 TARGET_3DSX="${TARGET_DIR}/3dstest.3dsx"

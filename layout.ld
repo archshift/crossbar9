@@ -1,9 +1,10 @@
-__aeabi_unwind_cpp_pr0 = panic_3ds;
-__aeabi_unwind_cpp_pr1 = panic_3ds;
-__aeabi_unwind_cpp_pr2 = panic_3ds;
-__exidx_start          = panic_3ds;
-__exidx_end            = panic_3ds;
+__aeabi_unwind_cpp_pr0 = abort;
+__aeabi_unwind_cpp_pr1 = abort;
+__aeabi_unwind_cpp_pr2 = abort;
+__exidx_start          = abort;
+__exidx_end            = abort;
 
+__aeabi_memcpy         = memcpy;
 __aeabi_memcpy4        = memcpy;
 
 ENTRY(start)

@@ -26,7 +26,9 @@ pub extern fn panic_fmt(_msg: core::fmt::Arguments, _file: &'static str, _line: 
 }
 
 #[no_mangle]
-pub extern fn panic_3ds() -> ! {
+pub extern fn abort() -> ! {
+    ::gfx::clear_screen(0xFF, 0x00, 0x00);
+    ::gfx::draw_string((2, 2), b"ABORTED");
     loop {}
 }
 

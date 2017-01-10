@@ -6,6 +6,10 @@ build = "build.rs"
 
 [profile.release]
 lto = true
+panic = "abort"
+
+[profile.dev]
+panic = "abort"
 
 [dependencies]
 rlibc = "1.0"
