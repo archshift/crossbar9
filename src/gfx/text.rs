@@ -10,13 +10,13 @@ fn draw_letter(pos: (usize, usize), letter: u8) {
     };
 
     let letter_num_cols = 32;
-    let letter_size = (3, 5);
-    let letter_padding = 1;
+    let letter_size = (3, 6);
+    let letter_padding = (1, 0);
 
     let letter_col = letter as usize % letter_num_cols;
     let letter_row = letter as usize / letter_num_cols;
-    let letter_x = (letter_size.0 + letter_padding) * letter_col;
-    let letter_y = (letter_size.1 + letter_padding) * letter_row;
+    let letter_x = (letter_size.0 + letter_padding.0) * letter_col;
+    let letter_y = (letter_size.1 + letter_padding.1) * letter_row;
 
     let letter_bmp = font_bmp.submap((letter_x, letter_y), letter_size);
 

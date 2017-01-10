@@ -17,8 +17,8 @@ impl<'a> Bitmap3<'a> {
         let parent_row_size = self.rect.0 + self.skip_pixels;
         // first byte: rows*row_size + columns
         let first_byte = 3 * (y * parent_row_size + x);
-        // last byte: bottom_rows*row_size + right_columns
-        let last_byte = 3 * ((y + h) * parent_row_size + (x + w));
+        // last byte: first_byte + extra_rows*row_size + extra_columns
+        let last_byte = first_byte + 3 * ((h - 1) * parent_row_size + w);
 
         Bitmap3 {
             bytes: &self.bytes[first_byte..last_byte],
