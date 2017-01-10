@@ -1,4 +1,4 @@
-extern crate core;
+use core;
 
 #[lang = "eh_personality"]
 #[no_mangle]
@@ -7,29 +7,20 @@ pub extern fn rust_eh_personality() { }
 #[lang = "panic_fmt"]
 #[no_mangle]
 pub extern fn panic_fmt(_msg: core::fmt::Arguments, _file: &'static str, _line: u32) -> ! {
-    struct PanicBuf { buf: [u8; 64], len: usize };
-
     use core::fmt::Write;
-    impl Write for PanicBuf {
+    struct Screen {};
+    impl Write for Screen {
         fn write_str(&mut self, s: &str) -> Result<(), core::fmt::Error> {
-            let bytes = s.as_bytes();
-            let avail = self.buf.len() - self.len;
-            let write_len = core::cmp::min(bytes.len(), avail);
-            for i in 0..write_len {
-                self.buf[self.len + i] = bytes[i];
-            }
-            self.len += write_len;
+            ::gfx::log(s.as_bytes());
             Ok(())
         }
     }
 
-    let mut buf = PanicBuf { buf: [0u8; 64], len: 0 };
-    core::fmt::write(&mut buf, _msg);
-    write!(buf, " @ {}, L{}\n", _file, _line);
-
     ::gfx::clear_screen(0xFF, 0xFF, 0xFF);
     ::gfx::log(b"PANIC PANIC PANIC PANIC PANIC\n");
-    ::gfx::log(&buf.buf[0..buf.len]);
+    let mut screen = Screen {};
+    core::fmt::write(&mut screen, _msg);
+    core::fmt::write(&mut screen, format_args!(" @ {}, L{}\n", _file, _line));
 
     loop {}
 }
