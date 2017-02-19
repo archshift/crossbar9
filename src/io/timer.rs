@@ -54,14 +54,14 @@ fn make_cnt(prescaler: Prescaler, count_up: bool, irq_enable: bool, started: boo
 }
 
 fn ticks_to_units(num_ticks: u64, prescaler: Prescaler, units_per_second: u32) -> u64 {
-    let scaled_tps: u64 = (1 << 26) * (units_per_second as u64);
-    let scaled_ticks = match prescaler {
-        Prescaler::Div1 => num_ticks,
-        Prescaler::Div64 => num_ticks << 6,
-        Prescaler::Div256 => num_ticks << 8,
-        Prescaler::Div1024 => num_ticks << 10,
+    let max_tps: u64 = (1 << 26);
+    let scaled_tps = match prescaler {
+        Prescaler::Div1 => max_tps,
+        Prescaler::Div64 => max_tps >> 6,
+        Prescaler::Div256 => max_tps >> 8,
+        Prescaler::Div1024 => max_tps >> 10,
     };
-    scaled_ticks / scaled_tps
+    (num_ticks * units_per_second as u64) / scaled_tps
 }
 
 
@@ -134,7 +134,7 @@ impl Timer {
     #[inline(always)]
     pub fn tick_val(&self) -> u64 {
         let overflows = unsafe { timer_overflows[self.index] };
-        (overflows * (u16::MAX as u64)) + (read_reg(self.val_reg) as u64)
+        (overflows << 16) | (read_reg(self.val_reg) as u64)
     }
 
     #[inline(always)]
