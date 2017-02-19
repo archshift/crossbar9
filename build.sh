@@ -2,8 +2,15 @@
 
 TARGET=thumbv5te-none-eabi
 
-RELMODE="$1"
-if [ "$1" = "debug" ]; then
+FEATURE="$1"
+if [ "$1" = "" ]; then
+    FEATURE="hello_world"
+fi
+
+echo "Compiling test \"$FEATURE\"..."
+
+RELMODE="$2"
+if [ "$2" = "debug" ]; then
     RELMODE_FLAG=""
 else
     RELMODE="release"
@@ -11,7 +18,7 @@ else
 fi
 
 export CC=arm-none-eabi-gcc
-rustup run nightly xargo build $RELMODE_FLAG || exit
+rustup run nightly xargo build --features "$FEATURE" $RELMODE_FLAG || exit
 
 TARGET_DIR="./target/${TARGET}/${RELMODE}"
 TARGET_ELF="${TARGET_DIR}/3dstest"
