@@ -1,5 +1,5 @@
 [package]
-name = "3dstest"
+name = "crossbar9"
 version = "0.1.0"
 authors = ["archshift <gh@archshift.com>"]
 build = "build.rs"

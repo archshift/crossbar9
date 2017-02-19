@@ -37,8 +37,8 @@
 #  0b100000/0x20 => Use this fix for the top screen
 #---------------------------------------------------------------------------------
 
-APP_TITLE = 3dstest
-APP_DESCRIPTION = test
+APP_TITLE = crossbar9
+APP_DESCRIPTION = Test for the 3DS ARM9
 APP_AUTHOR = archshift
 
 # PAYLOAD_PATH = //payload.bin
