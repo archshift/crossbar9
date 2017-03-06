@@ -1,5 +1,10 @@
-#[cfg(feature="hello_world")] mod hello_world;
-#[cfg(feature="hello_world")] pub use self::hello_world::main;
+macro_rules! define_test {
+    ($feature:expr, $name:ident) => (
+        #[cfg(feature=$feature)] pub mod $name;
+        #[cfg(feature=$feature)] pub use self::$name::main;
+    )
+}
 
-#[cfg(feature="sleep")] mod sleep_timer;
-#[cfg(feature="sleep")] pub use self::sleep_timer::main;
+define_test!("hello_world", hello_world);
+define_test!("sleep", sleep_timer);
+define_test!("armwrestler", armwrestler);

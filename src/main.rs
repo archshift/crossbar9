@@ -6,12 +6,13 @@
 extern crate bitutils;
 extern crate rlibc;
 
+mod ffistr;
 mod gfx;
 mod io;
 pub mod interrupts;
 pub mod intrinsics;
 mod realtime;
-mod tests;
+pub mod tests;
 mod unique;
 
 #[no_mangle]

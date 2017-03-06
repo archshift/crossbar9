@@ -24,3 +24,4 @@ gcc = "0.3.25"
 [features]
 hello_world = []
 sleep = []
+armwrestler = []

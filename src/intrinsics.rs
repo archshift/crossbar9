@@ -7,18 +7,9 @@ pub extern fn rust_eh_personality() { }
 #[lang = "panic_fmt"]
 #[no_mangle]
 pub extern fn panic_fmt(_msg: core::fmt::Arguments, _file: &'static str, _line: u32) -> ! {
-    use core::fmt::Write;
-    struct Screen {};
-    impl Write for Screen {
-        fn write_str(&mut self, s: &str) -> Result<(), core::fmt::Error> {
-            ::gfx::log(s.as_bytes());
-            Ok(())
-        }
-    }
-
     ::gfx::clear_screen(0xFF, 0xFF, 0xFF);
     ::gfx::log(b"PANIC PANIC PANIC PANIC PANIC\n");
-    let mut screen = Screen {};
+    let mut screen = ::gfx::LogWriter;
     core::fmt::write(&mut screen, _msg);
     core::fmt::write(&mut screen, format_args!(" @ {}, L{}\n", _file, _line));
 

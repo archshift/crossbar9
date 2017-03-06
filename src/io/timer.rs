@@ -28,6 +28,13 @@ pub enum Prescaler {
     Div1024 = 3,
 }
 
+bfdesc!(CntReg: u16, {
+    prescaler: 0 => 1,
+    count_up: 2 => 2,
+    irq_enable: 6 => 6,
+    started: 7 => 7
+});
+
 #[inline(never)]
 fn read_reg(reg: Reg) -> u16 {
     unsafe { intrinsics::volatile_load((TIMER_BASE + reg as u32) as *const u16) }
@@ -35,22 +42,6 @@ fn read_reg(reg: Reg) -> u16 {
 
 fn write_reg(reg: Reg, val: u16) {
     unsafe { intrinsics::volatile_store((TIMER_BASE + reg as u32) as *mut u16, val); }
-}
-
-fn make_cnt(prescaler: Prescaler, count_up: bool, irq_enable: bool, started: bool) -> u16 {
-    bitfield!(CntReg: u16, {
-        prescaler: 0 => 1,
-        count_up: 2 => 2,
-        irq_enable: 6 => 6,
-        started: 7 => 7
-    });
-
-    let mut cnt = CntReg::new(0);
-    bf!(cnt.prescaler = (prescaler as u16));
-    bf!(cnt.count_up = (count_up as u16));
-    bf!(cnt.irq_enable = (irq_enable as u16));
-    bf!(cnt.started = (started as u16));
-    cnt.raw()
 }
 
 fn ticks_to_units(num_ticks: u64, prescaler: Prescaler, units_per_second: u32) -> u64 {
@@ -168,16 +159,25 @@ impl Timer {
     }
 
     pub fn start(&self) {
-        write_reg(self.cnt_reg, read_reg(self.cnt_reg) | (1 << 7));
+        let mut cnt = read_reg(self.cnt_reg);
+        bf!(cnt @ CntReg::started = 1);
+        write_reg(self.cnt_reg, cnt);
     }
 
     pub fn stop(&self) {
-        write_reg(self.cnt_reg, read_reg(self.cnt_reg) & !(1 << 7));
+        let mut cnt = read_reg(self.cnt_reg);
+        bf!(cnt @ CntReg::started = 0);
+        write_reg(self.cnt_reg, cnt);
     }
 
     pub fn reset(&self) {
+        let mut cnt = 0u16;
+        bf!(cnt @ CntReg::prescaler = self.prescaler as u16);
+        bf!(cnt @ CntReg::count_up = 0);
+        bf!(cnt @ CntReg::irq_enable = 1);
+        bf!(cnt @ CntReg::started = 0);
+        write_reg(self.cnt_reg, cnt);
         write_reg(self.val_reg, self.start_val);
-        write_reg(self.cnt_reg, make_cnt(self.prescaler, false, true, false));
     }
 }
 

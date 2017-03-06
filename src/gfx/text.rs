@@ -1,3 +1,5 @@
+use core::fmt;
+
 use gfx::{Bitmap3, blit, SCREEN_WIDTH, SCREEN_HEIGHT};
 
 static FONT: &'static [u8; 0x2400] = include_bytes!("font.data");
@@ -53,4 +55,13 @@ pub fn log(string: &[u8]) {
     }
 
     unsafe { CURSOR = (x, y) };
+}
+
+pub struct LogWriter;
+
+impl fmt::Write for LogWriter {
+    fn write_str(&mut self, s: &str) -> Result<(), fmt::Error> {
+        log(s.as_bytes());
+        Ok(())
+    }
 }
