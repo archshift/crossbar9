@@ -12,28 +12,39 @@ extern {
     fn wrap_handle_pre();
     fn wrap_handle_dta();
     pub fn wait_for_interrupt();
+    fn disable_interrupts() -> bool;
+    fn enable_interrupts();
+}
+
+fn without_interrupts<T, F: FnOnce() -> T>(f: F) -> T {
+    let was_enabled = unsafe { disable_interrupts() };
+    let ret = f();
+    if was_enabled { unsafe { enable_interrupts() }; }
+    ret
 }
 
 #[no_mangle]
 pub extern fn init_interrupts() {
-    static vector_mappings: [(u32, unsafe extern fn()); 6] = [
-        (0x08000000, wrap_handle_irq),
-        (0x08000008, wrap_handle_fiq),
-        (0x08000010, wrap_handle_swi),
-        (0x08000018, wrap_handle_und),
-        (0x08000020, wrap_handle_pre),
-        (0x08000028, wrap_handle_dta),
-    ];
+    without_interrupts(|| {
+        static vector_mappings: [(u32, unsafe extern fn()); 6] = [
+            (0x08000000, wrap_handle_irq),
+            (0x08000008, wrap_handle_fiq),
+            (0x08000010, wrap_handle_swi),
+            (0x08000018, wrap_handle_und),
+            (0x08000020, wrap_handle_pre),
+            (0x08000028, wrap_handle_dta),
+        ];
 
-    for &(addr, handler) in vector_mappings.iter() {
-        unsafe {
-            *(addr as *mut u32) = ldr_pc_pc_neg4;
-            *((addr + 4) as *mut u32) = handler as u32;
+        for &(addr, handler) in vector_mappings.iter() {
+            unsafe {
+                *(addr as *mut u32) = ldr_pc_pc_neg4;
+                *((addr + 4) as *mut u32) = handler as u32;
+            }
         }
-    }
 
-    irq::set_disabled(!0u32);
-    irq::clear_all_pending();
+        irq::set_disabled(!0u32);
+        irq::clear_all_pending();
+    })
 }
 
 pub type HandlerFn = fn();
@@ -78,15 +89,17 @@ pub enum Error {
 }
 
 pub fn find_handler<'a>(int_type: u32, val: Option<HandlerFn>) -> Result<&'a mut Option<HandlerFn>, Error> {
-    let pos = match unsafe { handler_list.iter() }.position(|&x| x.0 == int_type) {
-        Some(x) => x,
-        None => return Err(Error::InvalidInterrupt)
-    };
-    let found_pos = match unsafe { handler_list[pos].1.iter() }.position(|&x| x == val) {
-        Some(x) => x,
-        None => return Err(Error::NotFound)
-    };
-    return Ok(unsafe { &mut handler_list[pos].1[found_pos] })
+    without_interrupts(|| {
+        let pos = match unsafe { handler_list.iter() }.position(|&x| x.0 == int_type) {
+            Some(x) => x,
+            None => return Err(Error::InvalidInterrupt)
+        };
+        let found_pos = match unsafe { handler_list[pos].1.iter() }.position(|&x| x == val) {
+            Some(x) => x,
+            None => return Err(Error::NotFound)
+        };
+        Ok(unsafe { &mut handler_list[pos].1[found_pos] })
+    })
 }
 
 pub fn register_handler(int_type: u32, handler: HandlerFn) -> Result<(), Error> {

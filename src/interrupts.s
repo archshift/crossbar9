@@ -64,7 +64,7 @@ wrap_handle_swi:
 .func wrap_handle_und
 wrap_handle_und:
     stmfd sp!, {r0-r3, r12, lr}
-    sub r0, lr, #4 ;; addr = LR - 4
+    sub r0, lr, #4 @@ addr = LR - 4
     blx handle_und
     ldmfd sp!, {r0-r3, r12, pc}^
     movs pc, lr
@@ -81,7 +81,7 @@ wrap_handle_pre:
 .func wrap_handle_dta
 wrap_handle_dta:
     stmfd sp!, {r0-r3, r12, lr}
-    sub r0, lr, #8 ;; addr = LR - 4
+    sub r0, lr, #8 @@ addr = LR - 4
     blx handle_dta
     ldmfd sp!, {r0-r3, r12, pc}^
     subs pc, lr, #8
@@ -102,6 +102,10 @@ disable_interrupts:
     mrs r0, cpsr
     orr r0, r0, #((1 << 6) | (1 << 7))
     msr cpsr_c, r0
+
+    ands r0, r0, #((1 << 6) | (1 << 7))
+    movne r0, #1 @@ Interrupts were enabled
+    moveq r0, #0 @@ Interrupts were disabled
     bx lr
 .endfunc
 
