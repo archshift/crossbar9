@@ -29,9 +29,10 @@ clr_bss_loop:
 	blo clr_bss_loop
 
 setup_modes:
-	msr cpsr_c, #0b11011111
-    ldr sp, =0xFFFF0000
+msr cpsr_c, #0b11010011
+    ldr sp, =0x08002000
     ldr lr, =0xFFFF0000
+    msr spsr_cxsf, #0
 
     msr cpsr_c, #0b11010010
     ldr sp, =0x08002800
@@ -53,10 +54,9 @@ setup_modes:
     ldr lr, =0xFFFF0000
     msr spsr_cxsf, #0
 
-    msr cpsr_c, #0b11010011
-    ldr sp, =0x08002000
+    msr cpsr_c, #0b11011111
+    ldr sp, =0x08004000
     ldr lr, =0xFFFF0000
-    msr spsr_cxsf, #0
 
 run:
 	blx init_interrupts
