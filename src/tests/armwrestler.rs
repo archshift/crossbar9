@@ -8,8 +8,8 @@ pub fn main() {
     unsafe {
         aw_test0();
         aw_test1();
-        // aw_test2();
-        // aw_test3();
+        aw_test2();
+        aw_test3();
         // aw_test4();
         // aw_test5();
     }
@@ -23,6 +23,7 @@ extern {
     fn aw_test4();
     fn aw_test5();
 
+    static szLDRtype: [u8; 12*5];
     static aw_rn_val: u32;
     static aw_mem_val: u32;
 }
@@ -33,19 +34,20 @@ pub extern fn aw_draw_text(string: *const u8, x: u32, y: u32, color: u32) {
 }
 
 #[no_mangle]
-pub extern fn aw_draw_result(string: *const u8, status: u32) {
+pub extern fn aw_draw_result(string: *const u8, status: u32, extra_data: u32) {
     let mut logger = gfx::LogWriter;
 
     gfx::log(unsafe { ffistr::str_bytes(&string) });
-    gfx::log(b" ");
 
     let mut skip_flags = false;
     if status & 0x80000000 != 0 {
-
+        let txti = extra_data as usize;
+        gfx::log(&szLDRtype[5*txti .. 5*txti+4]);
     } else if status & 0x40000000 != 0 {
         skip_flags = true;
     }
 
+    gfx::log(b" ");
     if status & 0xFF == 0 {
         gfx::log(b"OK\n");
     } else {

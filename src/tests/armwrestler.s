@@ -1287,6 +1287,7 @@ aw_test3:
 	sub 	r2,r0,#3
 	mov 	r3,r2
 	mov 	r4,#4
+	mov 	r9,#0
 	ldrsb 	r0,[r0,r9]
 	ldr 	r5,=0xffffff80
 	cmp 	r0,r5
