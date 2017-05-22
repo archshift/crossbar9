@@ -11,11 +11,14 @@
     "target-pointer-width": "32",
     "no-compiler-rt": true,
     "data-layout": "e-m:e-p:32:32-i64:64-v128:64:128-a:0:32-n32-S64",
-    "pre-link-args": [
-        "-nostdlib",
-        "-Tlayout.ld"
-    ],
-    "post-link-args": [
-        "-lgcc"
-    ]
+    "linker-flavor": "gcc",
+    "pre-link-args": {
+        "gcc": [
+            "-nostdlib",
+            "-Tlayout.ld"
+        ]
+    },
+    "post-link-args": {
+        "gcc": [ "-lgcc" ]
+    }
 }

@@ -12,4 +12,5 @@ To run `./build.sh`, you need to install `xargo` and be using `rustup` for manag
 ./build.sh [test name] [debug|release]
 ```
 
-Copy the generated file `./target/thumbv5te-none-eabi/<relmode>/crossbar9.3dsx` to your 3DS's SD card, and run using the Homebrew launcher.
+Copy the generated file `./target/thumbv5te-none-eabi/<relmode>/crossbar9.firm` to your 3DS's SD card, and run using boot9strap.
+

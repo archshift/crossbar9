@@ -4,8 +4,9 @@ use gfx::Bitmap3;
 
 pub static SCREEN_WIDTH: usize = 240;
 pub static SCREEN_HEIGHT: usize = 400;
-static TOP_SCREEN0: u32 = 0x20000000;
-static TOP_SCREEN1: u32 = 0x20046500;
+fn top_screen_addr() -> u32 {
+    unsafe { *(0x23FFFE00 as *mut u32) }
+}
 
 unsafe fn draw_pixel(fb_addr: u32, pos: (usize, usize), r: u8, g: u8, b: u8) {
     let base_addr = fb_addr + (3 * (pos.1 * SCREEN_WIDTH + pos.0)) as u32;
@@ -26,10 +27,7 @@ unsafe fn blit_(fb_addr: u32, pos: (usize, usize), bmp: &Bitmap3) {
 }
 
 pub fn blit(pos: (usize, usize), bmp: &Bitmap3) {
-    unsafe {
-        blit_(TOP_SCREEN0, pos, bmp);
-        blit_(TOP_SCREEN1, pos, bmp);
-    }
+    unsafe { blit_(top_screen_addr(), pos, bmp); }
 }
 
 unsafe fn clear_screen_(fb_addr: u32, r: u8, g: u8, b: u8) {
@@ -41,8 +39,5 @@ unsafe fn clear_screen_(fb_addr: u32, r: u8, g: u8, b: u8) {
 }
 
 pub fn clear_screen(r: u8, g: u8, b: u8) {
-    unsafe {
-        clear_screen_(TOP_SCREEN0, r, g, b);
-        clear_screen_(TOP_SCREEN1, r, g, b);
-    }
+    unsafe { clear_screen_(top_screen_addr(), r, g, b); }
 }

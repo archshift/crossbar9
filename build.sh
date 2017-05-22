@@ -23,16 +23,7 @@ rustup run nightly xargo build --features "$FEATURE" $RELMODE_FLAG || exit -1
 TARGET_DIR="./target/${TARGET}/${RELMODE}"
 TARGET_ELF="${TARGET_DIR}/crossbar9"
 TARGET_BIN="${TARGET_DIR}/crossbar9.bin"
-TARGET_3DSX="${TARGET_DIR}/crossbar9.3dsx"
+TARGET_FIRM="${TARGET_DIR}/crossbar9.firm"
 
 arm-none-eabi-objcopy -O binary -I elf32-littlearm "$TARGET_ELF" "$TARGET_BIN" || exit -1
-
-LDR_APPINFO_FILE="./BrahmaLoader/resources/AppInfo"
-LDR_PAYLOAD_FILE="./BrahmaLoader/data/payload.bin"
-LDR_OUTPUT_DIR="./BrahmaLoader/output"
-
-cp "$TARGET_BIN" "$LDR_PAYLOAD_FILE" || exit -1
-cp ./AppInfo "$LDR_APPINFO_FILE" || exit -1
-( cd ./BrahmaLoader && make ) || exit -1
-cp -R "${LDR_OUTPUT_DIR}/" "$TARGET_DIR" || exit -1
-rm -r "${LDR_OUTPUT_DIR}" || exit -1
+./firmtool/firmtool build "$TARGET_FIRM" -n 0x23F00000 -e 0 -D "$TARGET_BIN" -A 0x23F00000 -C NDMA || exit -1
