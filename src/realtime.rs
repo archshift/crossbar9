@@ -27,7 +27,7 @@ impl<'a> Drop for SleepTimer<'a> {
 
 
 pub fn usleep(us: u64) {
-    let timer = unsafe { &*rt_timer.unwrap() };
+    let timer = unsafe { &*rt_timer.expect("Attempted to sleep without initializing timer!") };
 
     let interval = timer.interrupt_interval_us();
     let initial = timer.us_val();
@@ -44,13 +44,11 @@ pub fn msleep(ms: u32) {
 }
 
 pub fn sleep(sec: u32) {
-    let timer = unsafe { &*rt_timer.unwrap() };
+    let timer = unsafe { &*rt_timer.expect("Attempted to sleep without initializing timer!") };
 
     let ms = sec * 1000;
     let interval = timer.interrupt_interval_ms();
     let initial = timer.ms_val();
-
-    // panic!("{}sec {}ms sleep; initial: {}ms; ints every {}ms", sec, ms, initial, interval);
 
     while (timer.ms_val() - initial + interval) < ms as u64 {
         unsafe { interrupts::wait_for_interrupt(); }
