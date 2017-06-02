@@ -2,6 +2,11 @@ use core::ptr;
 
 pub const I2C_BASES: [u32; 3] = [0x10161000, 0x10144000, 0x10148000];
 
+#[derive(Clone, Copy)]
+pub enum Device {
+    MCU = 0x03,
+}
+
 bfdesc!(RegCnt: u8, {
     end: 0 => 0,
     beginning: 1 => 1,
@@ -25,7 +30,7 @@ struct DevData {
 }
 
 impl DevData {
-    fn from_id(device_id: u8) -> DevData {
+    fn new(device: Device) -> DevData {
         const DEV_DATA: [DevData; 15] = [
             DevData { bus_id: 0, dev_addr: 0x4A },
             DevData { bus_id: 0, dev_addr: 0x7A },
@@ -43,7 +48,7 @@ impl DevData {
             DevData { bus_id: 2, dev_addr: 0x9A },
             DevData { bus_id: 2, dev_addr: 0xA0 }
         ];
-        DEV_DATA[device_id as usize]
+        DEV_DATA[device as usize]
     }
 
     #[inline(never)]
@@ -80,14 +85,12 @@ impl DevData {
         self.write_reg(Reg::CNT, 0xc5);
     }
 
-    fn signal_last_byte(&self, is_reading: u8) {
+    fn xfer_last_byte(&self, is_reading: u8) {
         self.write_reg(Reg::CNT, is_reading << 5 | 0xc1);
     }
 
-    fn complete_xfer(&self, is_reading: u8) {
+    fn xfer_byte(&self, is_reading: u8) {
         self.write_reg(Reg::CNT, is_reading << 5 | 0xc0);
-        self.wait_busy();
-        self.halt_xfer()
     }
 
     fn select_target(&self, reg: u8, is_reading: bool) -> Result<(), ()> {
@@ -111,12 +114,14 @@ impl DevData {
     }
 }
 
-pub fn read_byte(dev_id: u8, reg: u8) -> Result<u8, ()> {
-    let dev_data = DevData::from_id(dev_id);
+pub fn read_byte(dev: Device, reg: u8) -> Result<u8, ()> {
+    let dev_data = DevData::new(dev);
     for i in 0..8 {
         if dev_data.select_target(reg, true).is_ok() {
             dev_data.wait_busy();
-            dev_data.complete_xfer(1);
+            dev_data.xfer_byte(1);
+            dev_data.wait_busy();
+            dev_data.halt_xfer();
             dev_data.wait_busy();
             return Ok(dev_data.read_reg(Reg::DATA))
         }
@@ -126,14 +131,46 @@ pub fn read_byte(dev_id: u8, reg: u8) -> Result<u8, ()> {
     Err(())
 }
 
-pub fn write_byte(dev_id: u8, reg: u8, data: u8) -> Result<(), ()> {
-    let dev_data = DevData::from_id(dev_id);
+pub fn read_bytes(dev: Device, reg: u8, dest: &mut [u8]) -> Result<(), ()> {
+    if dest.len() == 0 {
+        return Ok(())
+    }
+
+    let dev_data = DevData::new(dev);
+    for i in 0..8 {
+        if dev_data.select_target(reg, true).is_ok() {
+            for n in 0..(dest.len() - 1) {
+                dev_data.wait_busy();
+                dev_data.write_reg(Reg::CNT, 0xF0);
+                dev_data.wait_busy();
+                dest[n] = dev_data.read_reg(Reg::DATA);
+            }
+
+            dev_data.wait_busy();
+            dev_data.xfer_last_byte(1);
+            dev_data.wait_busy();
+
+            let dest_end = dest.len() - 1;
+            dest[dest_end] = dev_data.read_reg(Reg::DATA);
+            return Ok(())
+        }
+        dev_data.wait_busy();
+        dev_data.halt_xfer();
+        dev_data.wait_busy();
+    }
+    Err(())
+}
+
+pub fn write_byte(dev: Device, reg: u8, data: u8) -> Result<(), ()> {
+    let dev_data = DevData::new(dev);
     for i in 0..8 {
         if dev_data.select_target(reg, false).is_ok() {
             dev_data.wait_busy();
             dev_data.write_reg(Reg::DATA, data);
-            dev_data.signal_last_byte(0);
-            dev_data.complete_xfer(0);
+            dev_data.xfer_last_byte(0);
+            dev_data.xfer_byte(0);
+            dev_data.wait_busy();
+            dev_data.halt_xfer();
             if dev_data.op_result().is_ok() {
                 return Ok(())
             }
