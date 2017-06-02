@@ -1,3 +1,4 @@
+pub mod hid;
 pub mod i2c;
 pub mod irq;
 pub mod sha;
