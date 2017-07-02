@@ -35,22 +35,31 @@ pub fn draw_string(pos: (usize, usize), string: &[u8]) {
 
 static mut CURSOR: (usize, usize) = (2, 2);
 
+pub fn reset_log_cursor() {
+    unsafe { CURSOR = (2, 2) };
+}
+
 pub fn log(string: &[u8]) {
     let (mut x, mut y) = unsafe { (CURSOR.0, CURSOR.1) };
 
+    let newline = |x: &mut usize, y: &mut usize| {
+        *y += 10;
+        *x = 2;
+        if *y >= SCREEN_HEIGHT {
+            *y = 2;
+        }
+    };
+
     for c in string {
         if *c == b'\n' {
-            y += 10; x = 2; // newline
+            newline(&mut x, &mut y);
         } else {
+            if x + 4 >= SCREEN_WIDTH {
+                newline(&mut x, &mut y);
+            }
+
             draw_letter((x, y), *c);
             x += 4;
-
-            if x > SCREEN_WIDTH {
-                y += 10; x = 2; // newline
-            }
-        }
-        if y > SCREEN_HEIGHT {
-            y = 2;
         }
     }
 

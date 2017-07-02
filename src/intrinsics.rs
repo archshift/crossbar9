@@ -8,19 +8,27 @@ pub extern fn rust_eh_personality() { }
 #[no_mangle]
 pub extern fn panic_fmt(_msg: core::fmt::Arguments, _file: &'static str, _line: u32) -> ! {
     ::gfx::clear_screen(0xFF, 0xFF, 0xFF);
+    ::gfx::reset_log_cursor();
+
     ::gfx::log(b"PANIC PANIC PANIC PANIC PANIC\n");
     let mut screen = ::gfx::LogWriter;
     core::fmt::write(&mut screen, _msg);
     core::fmt::write(&mut screen, format_args!(" @ {}, L{}\n", _file, _line));
 
-    loop {}
+    ::gfx::log(b"Press SELECT to power off.\n");
+    while !::io::hid::buttons_pressed().0[::io::hid::Button::SELECT.trailing_zeros() as usize] {}
+    ::power::power_off()
 }
 
 #[no_mangle]
 pub extern fn abort() -> ! {
     ::gfx::clear_screen(0xFF, 0x00, 0x00);
+    ::gfx::reset_log_cursor();
+
     ::gfx::draw_string((2, 2), b"ABORTED");
-    loop {}
+    loop {
+        unsafe { ::interrupts::wait_for_interrupt() };
+    }
 }
 
 extern {

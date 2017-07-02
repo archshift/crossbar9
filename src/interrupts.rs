@@ -16,7 +16,7 @@ extern {
     fn enable_interrupts();
 }
 
-fn without_interrupts<T, F: FnOnce() -> T>(f: F) -> T {
+pub fn without_interrupts<T, F: FnOnce() -> T>(f: F) -> T {
     let was_enabled = unsafe { disable_interrupts() };
     let ret = f();
     if was_enabled { unsafe { enable_interrupts() }; }
