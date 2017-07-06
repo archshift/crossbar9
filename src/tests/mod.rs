@@ -6,6 +6,7 @@ macro_rules! define_test {
 }
 
 define_test!("hello_world", hello_world);
+define_test!("rsa", rsa);
 define_test!("sleep", sleep_timer);
 define_test!("sha", sha_hasher);
 define_test!("armwrestler", armwrestler);
