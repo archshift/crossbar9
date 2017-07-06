@@ -68,8 +68,8 @@ pub fn crypt_2048(key: &[u8], modulus: &[u8], msg: &[u8]) -> [u8; 0x100] {
 
         while let (Some(b0), Some(b1), Some(b2), Some(b3))
                 = (k_it.next(), k_it.next(), k_it.next(), k_it.next()) {
-            let bytes = [*b0, *b1, *b2, *b3];
-            write_reg::<u32>(Reg::EXPFIFO, unsafe { mem::transmute(bytes) });
+            let word = (*b3 as u32) << 24 | (*b2 as u32) << 16 | (*b1 as u32) << 8 | (*b0 as u32);
+            write_reg::<u32>(Reg::EXPFIFO, word);
         }
     }
 
