@@ -45,14 +45,26 @@ static PRIVKEY: &[u8] = &[0x84, 0x65, 0x11, 0xce, 0x7c, 0xd3, 0xa6, 0x2a, 0xe7, 
 
 static TEXT: &[u8] = b"Na na na na, na na na na, heey heeey heeeeey, \
                        two-hundred-and-fifty-six bytes is a lot more text to fill than you may expect! \
-                       ASDASDADASDAKLJLDKANLKJBFLKDJBKSDF:LKAMD<:AMNFLKRJNF:AOISJD:AONFBASLKJDHALKJ\
-                       SBDAMNB<MNBAILUBMASDNQUCYNE7QASNBSMNB<ANSBIQUJBSKJ";
-
+                       So I'm just going to keep writing, writing, writing, and maybe someday I'll be \
+                       able to fill up all two hundred and fifty six bytes";
 pub fn main() {
     gfx::clear_screen(0xFF, 0xFF, 0xFF);
 
+    gfx::log(b"Starting enc/dec (normal)... ");
     let encrypted = rsa::crypt_2048(PUBKEY, MODULUS, TEXT);
     let bytes = rsa::crypt_2048(PRIVKEY, MODULUS, &encrypted[..]);
-    gfx::log(&bytes);
-    gfx::log(b"\n");
+    if &bytes[..] == TEXT {
+        gfx::log(b"SUCCEEDED!\n");
+    } else {
+        gfx::log(b"FAILED!\n");
+    }
+
+    gfx::log(b"Starting enc/dec (reverse)... ");
+    let encrypted_rev = rsa::crypt_2048_opt(PUBKEY, MODULUS, TEXT, false, false);
+    let bytes_rev = rsa::crypt_2048_opt(PRIVKEY, MODULUS, &encrypted_rev[..], false, false);
+    if &bytes_rev[..] == TEXT {
+        gfx::log(b"SUCCEEDED!\n");
+    } else {
+        gfx::log(b"FAILED!\n");
+    }
 }

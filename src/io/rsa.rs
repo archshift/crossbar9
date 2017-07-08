@@ -40,7 +40,15 @@ fn write_reg<T: Copy>(reg: Reg, val: T) {
     unsafe { intrinsics::volatile_store((RSA_BASE + reg as u32) as *mut T, val); }
 }
 
-pub fn crypt_2048(key: &[u8], modulus: &[u8], msg: &[u8]) -> [u8; 0x100] {
+pub fn tweak_buffer(buf: &mut [u8], little_endian: bool, normal_word_order: bool) {
+    match (little_endian, normal_word_order) {
+        (true, true) => {},
+        (false, false) => buf.reverse(),
+        _ => unimplemented!()
+    }
+}
+
+pub fn crypt_2048_opt(key: &[u8], modulus: &[u8], msg: &[u8], little_endian: bool, normal_word_order: bool) -> [u8; 0x100] {
     write_reg(Reg::UNK, 0u32);
 
     { // Update slot information
@@ -56,8 +64,8 @@ pub fn crypt_2048(key: &[u8], modulus: &[u8], msg: &[u8]) -> [u8; 0x100] {
     { // Update CNT
         let mut cnt = 0;
         bf!(cnt @ CntReg::keyslot = 3);
-        bf!(cnt @ CntReg::little_endian = 1);
-        bf!(cnt @ CntReg::normal_word_order = 1);
+        bf!(cnt @ CntReg::little_endian = little_endian as u32);
+        bf!(cnt @ CntReg::normal_word_order = normal_word_order as u32);
         write_reg(Reg::CNT, cnt);
     }
 
@@ -76,6 +84,7 @@ pub fn crypt_2048(key: &[u8], modulus: &[u8], msg: &[u8]) -> [u8; 0x100] {
     { // Modulus
         let mut mod_buf = [0u8; 0x100];
         mod_buf[..].copy_from_slice(modulus);
+        tweak_buffer(&mut mod_buf, little_endian, normal_word_order);
         write_reg(Reg::MOD, mod_buf);
     }
 
@@ -88,6 +97,7 @@ pub fn crypt_2048(key: &[u8], modulus: &[u8], msg: &[u8]) -> [u8; 0x100] {
     { // Write message/signature
         let mut msg_buf = [0u8; 0x100];
         msg_buf[0x100 - msg.len()..0x100].copy_from_slice(msg);
+        tweak_buffer(&mut msg_buf, little_endian, normal_word_order);
         write_reg(Reg::TXT, msg_buf);
     }
 
@@ -100,4 +110,8 @@ pub fn crypt_2048(key: &[u8], modulus: &[u8], msg: &[u8]) -> [u8; 0x100] {
     while bf!((read_reg(Reg::CNT)) @ CntReg::busy) == 1 { }
 
     read_reg(Reg::TXT)
+}
+
+pub fn crypt_2048(key: &[u8], modulus: &[u8], msg: &[u8]) -> [u8; 0x100] {
+    crypt_2048_opt(key, modulus, msg, true, true)
 }
