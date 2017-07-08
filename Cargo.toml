@@ -22,6 +22,7 @@ default-features = false
 gcc = "0.3.25"
 
 [features]
+aes = []
 hello_world = []
 rsa = []
 sleep = []

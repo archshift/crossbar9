@@ -5,6 +5,7 @@ macro_rules! define_test {
     )
 }
 
+define_test!("aes", aes);
 define_test!("hello_world", hello_world);
 define_test!("rsa", rsa);
 define_test!("sleep", sleep_timer);
