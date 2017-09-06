@@ -14,6 +14,8 @@ enum Reg {
     KEY_CNT = 0x011,
     CTR = 0x020,
     KEY_FIFO = 0x100,
+    KEYX_FIFO = 0x104,
+    KEYY_FIFO = 0x108
 }
 
 bfdesc!(CntReg: u32, {
@@ -58,7 +60,7 @@ pub enum Direction {
     Decrypt
 }
 
-pub fn crypt_cbc128(key: &[u8], iv: &[u8], msg: &mut [u8], direction: Direction) {
+pub fn crypt_cbc128(key: &[u8], key_y: Option<&[u8]>, iv: &[u8], msg: &mut [u8], direction: Direction) {
     { // Init
         let mut cnt = 0;
         bf!(cnt @ CntReg::flush_fifo_in = 1);
@@ -77,12 +79,26 @@ pub fn crypt_cbc128(key: &[u8], iv: &[u8], msg: &mut [u8], direction: Direction)
         write_reg(Reg::KEY_CNT, key_cnt);
 
         assert!(key.len() == 0x10);
+
+        let key_reg = if key_y.is_some() { Reg::KEYX_FIFO }
+                      else { Reg::KEY_FIFO };
+
         let mut key_it = key.iter();
         while let (Some(b0), Some(b1), Some(b2), Some(b3))
             = (key_it.next(), key_it.next(), key_it.next(), key_it.next()) {
 
             let bytes = [*b0, *b1, *b2, *b3];
-            write_reg::<[u8;4]>(Reg::KEY_FIFO, bytes);
+            write_reg::<[u8;4]>(key_reg, bytes);
+        }
+
+        if let Some(y) = key_y {
+            let mut y_it = y.iter();
+            while let (Some(b0), Some(b1), Some(b2), Some(b3))
+                = (y_it.next(), y_it.next(), y_it.next(), y_it.next()) {
+
+                let bytes = [*b0, *b1, *b2, *b3];
+                write_reg::<[u8;4]>(Reg::KEYY_FIFO, bytes);
+            }
         }
     }
 
