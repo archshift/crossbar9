@@ -87,6 +87,39 @@ impl<'a> Iterator for Byte4Iter<'a> {
     }
 }
 
+fn u128_bytes(mut num: u128) -> [u8;0x10] {
+    let mut data = [0u8; 0x10];
+    for b in data.iter_mut().rev() {
+        *b = num as u8;
+        num >>= 8;
+    }
+    data
+}
+
+fn u128_from_bytes(data: &[u8]) -> u128 {
+    assert!(data.len() == 16);
+    let mut new = 0u128;
+    for b in data.iter() {
+        new <<= 8;
+        new |= *b as u128;
+    }
+    new
+}
+
+// Returns Ok(blocks) if aligned to block length, Err(rounded_up) if not aligned
+pub fn buf_num_blocks(buf: &[u8]) -> Result<usize, usize> {
+    if buf.len() % 16 == 0 {
+        Ok(buf.len() >> 4)
+    } else {
+        Err(buf.len() >> 4 + 1)
+    }
+}
+
+pub fn ctr_add(ctr: &[u8], blocks: usize) -> [u8;0x10] {
+    let num = u128_from_bytes(ctr) + blocks as u128;
+    u128_bytes(num)
+}
+
 pub fn crypt128(key: &[u8], key_y: Option<&[u8]>, iv: Option<&[u8]>, msg: &mut [u8],
                     mode: Mode, direction: Direction) {
     { // Init
@@ -145,8 +178,8 @@ pub fn crypt128(key: &[u8], key_y: Option<&[u8]>, iv: Option<&[u8]>, msg: &mut [
     }
 
     { // Start processing
-        assert!(msg.len() % 16 == 0);
-        write_reg(Reg::BLK_CNT, (msg.len() >> 4) as u16);
+        let msg_blocks = buf_num_blocks(msg).unwrap();
+        write_reg(Reg::BLK_CNT, msg_blocks as u16);
 
         let mode_base = match mode {
             Mode::CCM => 0,
