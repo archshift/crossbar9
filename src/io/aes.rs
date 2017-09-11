@@ -1,6 +1,6 @@
 use core::intrinsics;
-use core::iter;
 use core::mem;
+use core::slice;
 
 const AES_BASE: u32 = 0x10009000u32;
 
@@ -55,12 +55,40 @@ fn write_reg<T: Copy>(reg: Reg, val: T) {
 }
 
 #[derive(Clone, Copy)]
+pub enum Mode {
+    CCM,
+    CTR,
+    CBC,
+    ECB
+}
+
+#[derive(Clone, Copy)]
 pub enum Direction {
     Encrypt,
     Decrypt
 }
 
-pub fn crypt_cbc128(key: &[u8], key_y: Option<&[u8]>, iv: &[u8], msg: &mut [u8], direction: Direction) {
+struct Byte4Iter<'a>(slice::Iter<'a, u8>);
+impl<'a> Byte4Iter<'a> {
+    fn new(slice: &'a [u8]) -> Byte4Iter<'a> {
+        assert!(slice.len() % 4 == 0);
+        Byte4Iter(slice.iter())
+    }
+}
+impl<'a> Iterator for Byte4Iter<'a> {
+    type Item = [u8;4];
+    fn next(&mut self) -> Option<Self::Item> {
+        if let (Some(b0), Some(b1), Some(b2), Some(b3))
+            = (self.0.next(), self.0.next(), self.0.next(), self.0.next()) {
+            Some([*b0, *b1, *b2, *b3])
+        } else {
+            None
+        }
+    }
+}
+
+pub fn crypt128(key: &[u8], key_y: Option<&[u8]>, iv: Option<&[u8]>, msg: &mut [u8],
+                    mode: Mode, direction: Direction) {
     { // Init
         let mut cnt = 0;
         bf!(cnt @ CntReg::flush_fifo_in = 1);
@@ -83,39 +111,27 @@ pub fn crypt_cbc128(key: &[u8], key_y: Option<&[u8]>, iv: &[u8], msg: &mut [u8],
         let key_reg = if key_y.is_some() { Reg::KEYX_FIFO }
                       else { Reg::KEY_FIFO };
 
-        let mut key_it = key.iter();
-        while let (Some(b0), Some(b1), Some(b2), Some(b3))
-            = (key_it.next(), key_it.next(), key_it.next(), key_it.next()) {
-
-            let bytes = [*b0, *b1, *b2, *b3];
-            write_reg::<[u8;4]>(key_reg, bytes);
+        for bytes4 in Byte4Iter::new(key) {
+            write_reg::<[u8;4]>(key_reg, bytes4);
         }
 
         if let Some(y) = key_y {
-            let mut y_it = y.iter();
-            while let (Some(b0), Some(b1), Some(b2), Some(b3))
-                = (y_it.next(), y_it.next(), y_it.next(), y_it.next()) {
-
-                let bytes = [*b0, *b1, *b2, *b3];
-                write_reg::<[u8;4]>(Reg::KEYY_FIFO, bytes);
+            for bytes4 in Byte4Iter::new(y) {
+                write_reg::<[u8;4]>(Reg::KEYY_FIFO, bytes4);
             }
         }
     }
 
     { // Write IV
         let mut iv_words = [0u32; 4];
-        {
-            let mut iv_it = iv.iter();
+        if let Some(iv) = iv {
+            assert!(iv.len() == 0x10);
+            let mut iv_it = Byte4Iter::new(iv);
             let mut iv_word_it = iv_words.iter_mut().rev();
 
-            assert!(iv.len() == 0x10);
-            while let (Some(word), Some(b0), Some(b1), Some(b2), Some(b3))
-                = (iv_word_it.next(), iv_it.next(), iv_it.next(), iv_it.next(), iv_it.next()) {
-
-                let bytes = [*b0, *b1, *b2, *b3];
-                *word = unsafe { mem::transmute(bytes) };
+            for (word, bytes4) in iv_word_it.zip(iv_it) {
+                *word = unsafe { mem::transmute(bytes4) };
             }
-
         }
         write_reg(Reg::CTR, iv_words);
     }
@@ -132,13 +148,19 @@ pub fn crypt_cbc128(key: &[u8], key_y: Option<&[u8]>, iv: &[u8], msg: &mut [u8],
         assert!(msg.len() % 16 == 0);
         write_reg(Reg::BLK_CNT, (msg.len() >> 4) as u16);
 
-        let mode = match direction {
-            Direction::Decrypt => 4, // AES-CBC
-            Direction::Encrypt => 5,
+        let mode_base = match mode {
+            Mode::CCM => 0,
+            Mode::CTR => 2,
+            Mode::CBC => 4,
+            Mode::ECB => 6
+        };
+        let mode_num = match direction {
+            Direction::Decrypt => mode_base,
+            Direction::Encrypt => mode_base + 1,
         };
 
         let mut cnt = read_reg::<u32>(Reg::CNT);
-        bf!(cnt @ CntReg::mode = mode);
+        bf!(cnt @ CntReg::mode = mode_num);
         bf!(cnt @ CntReg::busy = 1);
         write_reg(Reg::CNT, cnt);
     }
@@ -157,10 +179,8 @@ pub fn crypt_cbc128(key: &[u8], key_y: Option<&[u8]>, iv: &[u8], msg: &mut [u8],
         while pos < msg.len() {
             while fifo_in_full() { }
 
-            for i in 0..4 {
-                let mut bytes = [0u8;4];
-                bytes.copy_from_slice(&msg[pos + i*4 .. pos + i*4+4]);
-                write_reg::<[u8;4]>(Reg::FIFO_IN, bytes);
+            for bytes4 in Byte4Iter::new(&msg[pos .. pos + 16]) {
+                write_reg::<[u8;4]>(Reg::FIFO_IN, bytes4);
             }
 
             while fifo_out_empty() { }
