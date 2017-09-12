@@ -30,56 +30,64 @@ pub fn main() {
 
     let mut buf = [0u8;32];
 
-    gfx::log(b"Starting AES-CBC encryption (normal, rand-iv)... ");
-    buf.copy_from_slice(TEXT);
-    aes::crypt128(NORM_KEY, None, Some(IV), &mut buf[..], aes::Mode::CBC, aes::Direction::Encrypt);
-    print_ifeq_res(&buf[..], ENCRYPTED_CBC);
+    let mut ctx = aes::AesContext::new().unwrap();
 
-    gfx::log(b"Starting AES-CBC decryption (normal, rand-iv)... ");
-    buf.copy_from_slice(ENCRYPTED_CBC);
-    aes::crypt128(NORM_KEY, None, Some(IV), &mut buf[..], aes::Mode::CBC, aes::Direction::Decrypt);
-    print_ifeq_res(&buf[..], TEXT);
+    ctx = ctx.with_keypair(KEYX, KEYY);
+    {
+        gfx::log(b"Starting AES-CBC encryption (keypair)... ");
+        buf.copy_from_slice(TEXT);
+        ctx.crypt128(aes::Mode::CBC, aes::Direction::Encrypt, &mut buf[..], Some(IV));
+        print_ifeq_res(&buf[..], ENCRYPTED_CBC);
+    }
 
-    gfx::log(b"Starting AES-CBC encryption (keypair)... ");
-    buf.copy_from_slice(TEXT);
-    aes::crypt128(KEYX, Some(KEYY), Some(IV), &mut buf[..], aes::Mode::CBC, aes::Direction::Encrypt);
-    print_ifeq_res(&buf[..], ENCRYPTED_CBC);
+    ctx = ctx.with_normalkey(NORM_KEY);
+    {
+        gfx::log(b"Starting AES-CBC encryption (normal)... ");
+        buf.copy_from_slice(TEXT);
+        ctx.crypt128(aes::Mode::CBC, aes::Direction::Encrypt, &mut buf[..], Some(IV));
+        print_ifeq_res(&buf[..], ENCRYPTED_CBC);
 
-    gfx::log(b"Starting AES-ECB encryption (normal)... ");
-    buf.copy_from_slice(TEXT);
-    aes::crypt128(NORM_KEY, None, Some(IV), &mut buf[..], aes::Mode::ECB, aes::Direction::Encrypt);
-    print_ifeq_res(&buf[..], ENCRYPTED_ECB);
+        gfx::log(b"Starting AES-CBC decryption (normal)... ");
+        buf.copy_from_slice(ENCRYPTED_CBC);
+        ctx.crypt128(aes::Mode::CBC, aes::Direction::Decrypt, &mut buf[..], Some(IV));
+        print_ifeq_res(&buf[..], TEXT);
 
-    gfx::log(b"Starting AES-ECB decryption (normal)... ");
-    buf.copy_from_slice(ENCRYPTED_ECB);
-    aes::crypt128(NORM_KEY, None, None, &mut buf[..], aes::Mode::ECB, aes::Direction::Decrypt);
-    print_ifeq_res(&buf[..], TEXT);
+        gfx::log(b"Starting AES-ECB encryption (normal)... ");
+        buf.copy_from_slice(TEXT);
+        ctx.crypt128(aes::Mode::ECB, aes::Direction::Encrypt, &mut buf[..], Some(IV));
+        print_ifeq_res(&buf[..], ENCRYPTED_ECB);
 
-    let mut ctr = [0u8;16];
+        gfx::log(b"Starting AES-ECB decryption (normal)... ");
+        buf.copy_from_slice(ENCRYPTED_ECB);
+        ctx.crypt128(aes::Mode::ECB, aes::Direction::Decrypt, &mut buf[..], Some(IV));
+        print_ifeq_res(&buf[..], TEXT);
 
-    gfx::log(b"Starting AES-CTR encryption (full)... ");
-    buf.copy_from_slice(TEXT);
-    aes::crypt128(NORM_KEY, None, Some(IV), &mut buf[..], aes::Mode::CTR, aes::Direction::Encrypt);
-    print_ifeq_res(&buf[..], ENCRYPTED_CTR);
+        let mut ctr = [0u8;16];
 
-    gfx::log(b"Starting AES-CTR encryption (block-wise)... ");
-    buf.copy_from_slice(TEXT);
-    ctr.copy_from_slice(IV);
-    aes::crypt128(NORM_KEY, None, Some(&ctr), &mut buf[0..16], aes::Mode::CTR, aes::Direction::Encrypt);
-    ctr = aes::ctr_add(&ctr, aes::buf_num_blocks(&buf[0..16]).unwrap());
-    aes::crypt128(NORM_KEY, None, Some(&ctr), &mut buf[16..], aes::Mode::CTR, aes::Direction::Encrypt);
-    print_ifeq_res(&buf[..], ENCRYPTED_CTR);
+        gfx::log(b"Starting AES-CTR encryption (full)... ");
+        buf.copy_from_slice(TEXT);
+        ctx.crypt128(aes::Mode::CTR, aes::Direction::Encrypt, &mut buf[..], Some(IV));
+        print_ifeq_res(&buf[..], ENCRYPTED_CTR);
 
-    gfx::log(b"Starting AES-CTR decryption (full)... ");
-    buf.copy_from_slice(ENCRYPTED_CTR);
-    aes::crypt128(NORM_KEY, None, Some(IV), &mut buf[..], aes::Mode::CTR, aes::Direction::Decrypt);
-    print_ifeq_res(&buf[..], TEXT);
+        gfx::log(b"Starting AES-CTR decryption (full)... ");
+        buf.copy_from_slice(ENCRYPTED_CTR);
+        ctx.crypt128(aes::Mode::CTR, aes::Direction::Decrypt, &mut buf[..], Some(IV));
+        print_ifeq_res(&buf[..], TEXT);
 
-    gfx::log(b"Starting AES-CTR decryption (block-wise)... ");
-    buf.copy_from_slice(ENCRYPTED_CTR);
-    ctr.copy_from_slice(IV);
-    aes::crypt128(NORM_KEY, None, Some(&ctr), &mut buf[0..16], aes::Mode::CTR, aes::Direction::Decrypt);
-    ctr = aes::ctr_add(&ctr, aes::buf_num_blocks(&buf[0..16]).unwrap());
-    aes::crypt128(NORM_KEY, None, Some(&ctr), &mut buf[16..], aes::Mode::CTR, aes::Direction::Decrypt);
-    print_ifeq_res(&buf[..], TEXT);
+        gfx::log(b"Starting AES-CTR encryption (block-wise)... ");
+        buf.copy_from_slice(TEXT);
+        ctr.copy_from_slice(IV);
+        ctx.crypt128(aes::Mode::CTR, aes::Direction::Encrypt, &mut buf[0..16], Some(&ctr));
+        ctr = aes::ctr_add(&ctr, aes::buf_num_blocks(&buf[0..16]).unwrap());
+        ctx.crypt128(aes::Mode::CTR, aes::Direction::Encrypt, &mut buf[16..], Some(&ctr));
+        print_ifeq_res(&buf[..], ENCRYPTED_CTR);
+
+        gfx::log(b"Starting AES-CTR decryption (block-wise)... ");
+        buf.copy_from_slice(ENCRYPTED_CTR);
+        ctr.copy_from_slice(IV);
+        ctx.crypt128(aes::Mode::CTR, aes::Direction::Decrypt, &mut buf[0..16], Some(&ctr));
+        ctr = aes::ctr_add(&ctr, aes::buf_num_blocks(&buf[0..16]).unwrap());
+        ctx.crypt128(aes::Mode::CTR, aes::Direction::Decrypt, &mut buf[16..], Some(&ctr));
+        print_ifeq_res(&buf[..], TEXT);
+    }
 }

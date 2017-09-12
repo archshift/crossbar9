@@ -120,9 +120,41 @@ pub fn ctr_add(ctr: &[u8], blocks: usize) -> [u8;0x10] {
     u128_bytes(num)
 }
 
-pub fn crypt128(key: &[u8], key_y: Option<&[u8]>, iv: Option<&[u8]>, msg: &mut [u8],
-                    mode: Mode, direction: Direction) {
-    { // Init
+pub struct AesContext<'a> {
+    keyslot: u8,
+    keywriter: fn(&AesContext, u8, &[u8], Option<&[u8]>),
+    key: Option<&'a [u8]>,
+    key_y: Option<&'a [u8]>
+}
+
+impl<'a> AesContext<'a> {
+    pub fn new() -> Result<AesContext<'a>, ()> {
+        // TODO: Check if other contexts are active and fail
+        Ok(AesContext {
+            keyslot: 0x3F,
+            keywriter: keywriter::anykey,
+            key: None,
+            key_y: None
+        })
+    }
+
+    pub fn with_keyslot(mut self, keyslot: u8) -> AesContext<'a> {
+        AesContext { keyslot: keyslot, ..self }
+    }
+
+    pub fn with_keywriter(mut self, keywriter: fn(&AesContext, u8, &[u8], Option<&[u8]>)) -> AesContext<'a> {
+        AesContext { keywriter: keywriter, ..self }
+    }
+
+    pub fn with_normalkey(mut self, key: &'a [u8]) -> AesContext<'a> {
+        AesContext { key: Some(key), key_y: None, ..self }
+    }
+
+    pub fn with_keypair(mut self, keyx: &'a [u8], keyy: &'a [u8]) -> AesContext<'a> {
+        AesContext { key: Some(keyx), key_y: Some(keyy), ..self }
+    }
+
+    pub fn crypt128(&self, mode: Mode, direction: Direction, msg: &mut [u8], iv_ctr: Option<&[u8]>) {
         let mut cnt = 0;
         bf!(cnt @ CntReg::flush_fifo_in = 1);
         bf!(cnt @ CntReg::flush_fifo_out = 1);
@@ -131,99 +163,112 @@ pub fn crypt128(key: &[u8], key_y: Option<&[u8]>, iv: Option<&[u8]>, msg: &mut [
         bf!(cnt @ CntReg::in_big_endian = 1);
         bf!(cnt @ CntReg::in_normal_order = 1);
         write_reg(Reg::CNT, cnt);
-    }
 
-    { // Write key
+        if let Some(key) = self.key {
+            (self.keywriter)(self, self.keyslot, key, self.key_y);
+        }
+
+        let (mode_base, requires_iv) = match mode {
+            Mode::CCM => (0, true),
+            Mode::CTR => (2, true),
+            Mode::CBC => (4, true),
+            Mode::ECB => (6, false)
+        };
+
+        // Write IV
+        if requires_iv {
+            let mut iv_words = [0u32; 4];
+            if let Some(iv) = iv_ctr {
+                assert!(iv.len() == 0x10);
+
+                let mut iv_it = Byte4Iter::new(iv);
+                let mut iv_word_it = iv_words.iter_mut().rev();
+
+                for (word, bytes4) in iv_word_it.zip(iv_it) {
+                    *word = unsafe { mem::transmute(bytes4) };
+                }
+            } else {
+                panic!("This crypto mode requires an IV/CTR");
+            }
+            write_reg(Reg::CTR, iv_words);
+        }
+
+        { // Select keyslot
+            write_reg(Reg::KEY_SEL, self.keyslot);
+
+            let mut cnt = read_reg::<u32>(Reg::CNT);
+            bf!(cnt @ CntReg::update_keyslot = 1);
+            write_reg(Reg::CNT, cnt);
+        }
+
+        { // Start processing
+            let msg_blocks = buf_num_blocks(msg).unwrap();
+            write_reg(Reg::BLK_CNT, msg_blocks as u16);
+
+            let mode_num = match direction {
+                Direction::Decrypt => mode_base,
+                Direction::Encrypt => mode_base + 1,
+            };
+
+            let mut cnt = read_reg::<u32>(Reg::CNT);
+            bf!(cnt @ CntReg::mode = mode_num);
+            bf!(cnt @ CntReg::busy = 1);
+            write_reg(Reg::CNT, cnt);
+        }
+
+        { // Perform crypto
+            let fifo_in_full = || {
+                let cnt: u32 = read_reg(Reg::CNT);
+                bf!(cnt @ CntReg::fifo_in_count) == 16
+            };
+            let fifo_out_empty = || {
+                let cnt: u32 = read_reg(Reg::CNT);
+                bf!(cnt @ CntReg::fifo_out_count) == 0
+            };
+
+            let mut pos = 0;
+            while pos < msg.len() {
+                while fifo_in_full() { }
+
+                for bytes4 in Byte4Iter::new(&msg[pos .. pos + 16]) {
+                    write_reg::<[u8;4]>(Reg::FIFO_IN, bytes4);
+                }
+
+                while fifo_out_empty() { }
+
+                for i in 0..4 {
+                    let bytes: [u8; 4] = read_reg(Reg::FIFO_OUT);
+                    msg[pos + i*4 .. pos + i*4+4].copy_from_slice(&bytes[..]);
+                }
+
+                pos += 16;
+            }
+        }
+    }
+}
+
+pub mod keywriter {
+    use super::*;
+    pub fn anykey(ctx: &AesContext, keyslot: u8, key: &[u8], key_y: Option<&[u8]>) {
         let mut key_cnt = 0;
-        bf!(key_cnt @ KeyCntReg::keyslot = 0x3F);
+        bf!(key_cnt @ KeyCntReg::keyslot = keyslot);
         bf!(key_cnt @ KeyCntReg::enable_fifo_flush = 1);
         write_reg(Reg::KEY_CNT, key_cnt);
-
-        assert!(key.len() == 0x10);
 
         let key_reg = if key_y.is_some() { Reg::KEYX_FIFO }
                       else { Reg::KEY_FIFO };
 
+        assert!(key.len() == 0x10);
         for bytes4 in Byte4Iter::new(key) {
             write_reg::<[u8;4]>(key_reg, bytes4);
         }
 
         if let Some(y) = key_y {
+            assert!(y.len() == 0x10);
             for bytes4 in Byte4Iter::new(y) {
                 write_reg::<[u8;4]>(Reg::KEYY_FIFO, bytes4);
             }
-        }
-    }
 
-    { // Write IV
-        let mut iv_words = [0u32; 4];
-        if let Some(iv) = iv {
-            assert!(iv.len() == 0x10);
-            let mut iv_it = Byte4Iter::new(iv);
-            let mut iv_word_it = iv_words.iter_mut().rev();
-
-            for (word, bytes4) in iv_word_it.zip(iv_it) {
-                *word = unsafe { mem::transmute(bytes4) };
-            }
-        }
-        write_reg(Reg::CTR, iv_words);
-    }
-
-    { // Select keyslot
-        write_reg(Reg::KEY_SEL, 0x3Fu8);
-
-        let mut cnt = read_reg::<u32>(Reg::CNT);
-        bf!(cnt @ CntReg::update_keyslot = 1);
-        write_reg(Reg::CNT, cnt);
-    }
-
-    { // Start processing
-        let msg_blocks = buf_num_blocks(msg).unwrap();
-        write_reg(Reg::BLK_CNT, msg_blocks as u16);
-
-        let mode_base = match mode {
-            Mode::CCM => 0,
-            Mode::CTR => 2,
-            Mode::CBC => 4,
-            Mode::ECB => 6
-        };
-        let mode_num = match direction {
-            Direction::Decrypt => mode_base,
-            Direction::Encrypt => mode_base + 1,
-        };
-
-        let mut cnt = read_reg::<u32>(Reg::CNT);
-        bf!(cnt @ CntReg::mode = mode_num);
-        bf!(cnt @ CntReg::busy = 1);
-        write_reg(Reg::CNT, cnt);
-    }
-
-    { // Perform crypto
-        let fifo_in_full = || {
-            let cnt: u32 = read_reg(Reg::CNT);
-            bf!(cnt @ CntReg::fifo_in_count) == 16
-        };
-        let fifo_out_empty = || {
-            let cnt: u32 = read_reg(Reg::CNT);
-            bf!(cnt @ CntReg::fifo_out_count) == 0
-        };
-
-        let mut pos = 0;
-        while pos < msg.len() {
-            while fifo_in_full() { }
-
-            for bytes4 in Byte4Iter::new(&msg[pos .. pos + 16]) {
-                write_reg::<[u8;4]>(Reg::FIFO_IN, bytes4);
-            }
-
-            while fifo_out_empty() { }
-
-            for i in 0..4 {
-                let bytes: [u8; 4] = read_reg(Reg::FIFO_OUT);
-                msg[pos + i*4 .. pos + i*4+4].copy_from_slice(&bytes[..]);
-            }
-
-            pos += 16;
         }
     }
 }
