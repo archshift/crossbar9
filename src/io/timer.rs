@@ -124,7 +124,9 @@ impl Timer {
 
     #[inline(always)]
     pub fn tick_val(&self) -> u64 {
-        let overflows = unsafe { timer_overflows[self.index] };
+        let overflows = interrupts::without_interrupts(|| {
+            unsafe { timer_overflows[self.index] }
+        });
         (overflows << 16) | (read_reg(self.val_reg) as u64)
     }
 
