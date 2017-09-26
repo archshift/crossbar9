@@ -1,4 +1,4 @@
-#![feature(lang_items, core_intrinsics, i128_type)]
+#![feature(lang_items, core_intrinsics, i128_type, conservative_impl_trait)]
 #![no_std]
 #![no_main]
 

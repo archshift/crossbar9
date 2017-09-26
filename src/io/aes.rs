@@ -68,19 +68,18 @@ pub enum Direction {
     Decrypt
 }
 
-struct Byte4Iter<'a>(slice::Iter<'a, u8>);
+pub struct Byte4Iter<'a>(slice::Chunks<'a, u8>);
 impl<'a> Byte4Iter<'a> {
-    fn new(slice: &'a [u8]) -> Byte4Iter<'a> {
+    pub fn new(slice: &'a [u8]) -> Byte4Iter<'a> {
         assert!(slice.len() % 4 == 0);
-        Byte4Iter(slice.iter())
+        Byte4Iter(slice.chunks(4))
     }
 }
 impl<'a> Iterator for Byte4Iter<'a> {
     type Item = [u8;4];
     fn next(&mut self) -> Option<Self::Item> {
-        if let (Some(b0), Some(b1), Some(b2), Some(b3))
-            = (self.0.next(), self.0.next(), self.0.next(), self.0.next()) {
-            Some([*b0, *b1, *b2, *b3])
+        if let Some(b) = self.0.next() {
+            Some([b[0], b[1], b[2], b[3]])
         } else {
             None
         }
@@ -124,7 +123,8 @@ pub struct AesContext<'a> {
     keyslot: u8,
     keywriter: fn(&AesContext, u8, &[u8], Option<&[u8]>),
     key: Option<&'a [u8]>,
-    key_y: Option<&'a [u8]>
+    key_y: Option<&'a [u8]>,
+    output_le: bool,
 }
 
 impl<'a> AesContext<'a> {
@@ -134,7 +134,8 @@ impl<'a> AesContext<'a> {
             keyslot: 0x3F,
             keywriter: keywriter::anykey,
             key: None,
-            key_y: None
+            key_y: None,
+            output_le: false,
         })
     }
 
@@ -154,11 +155,15 @@ impl<'a> AesContext<'a> {
         AesContext { key: Some(keyx), key_y: Some(keyy), ..self }
     }
 
+    pub fn with_output_le(mut self, state: bool) -> AesContext<'a> {
+        AesContext { output_le: state, ..self }
+    }
+
     pub fn crypt128(&self, mode: Mode, direction: Direction, msg: &mut [u8], iv_ctr: Option<&[u8]>) {
         let mut cnt = 0;
         bf!(cnt @ CntReg::flush_fifo_in = 1);
         bf!(cnt @ CntReg::flush_fifo_out = 1);
-        bf!(cnt @ CntReg::out_big_endian = 1);
+        bf!(cnt @ CntReg::out_big_endian = !self.output_le as u32);
         bf!(cnt @ CntReg::out_normal_order = 1);
         bf!(cnt @ CntReg::in_big_endian = 1);
         bf!(cnt @ CntReg::in_normal_order = 1);

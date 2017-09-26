@@ -17,12 +17,17 @@ pub static ENCRYPTED_CTR: &[u8] = &[0x43, 0xde, 0x1b, 0x35, 0x20, 0x9b, 0xc6, 0x
                                     0x33, 0xee, 0x1a, 0x04, 0x96, 0x9d, 0x12, 0x82, 0x74, 0xdb, 0x7d, 0x21,
                                     0xc5, 0x1e, 0xb8, 0x19, 0xa5, 0xa7, 0x40, 0x14];
 
-fn print_ifeq_res<T: PartialEq>(a: T, b: T) {
-    if a == b {
+fn print_ifeq_res<T: PartialEq, I1, I2>(a: I1, b: I2)
+    where I1: Iterator<Item = T>, I2: Iterator<Item = T> {
+    if a.eq(b) {
         gfx::log(b"SUCCEEDED!\n");
     } else {
         gfx::log(b"FAILED!\n");
     }
+}
+
+fn reverse_word_bytes<'a>(buf: &'a [u8]) -> impl Iterator<Item = &'a u8> {
+    buf.chunks(4).flat_map(|c| c.iter().rev())
 }
 
 pub fn main() {
@@ -37,7 +42,7 @@ pub fn main() {
         gfx::log(b"Starting AES-CBC encryption (keypair)... ");
         buf.copy_from_slice(TEXT);
         ctx.crypt128(aes::Mode::CBC, aes::Direction::Encrypt, &mut buf[..], Some(IV));
-        print_ifeq_res(&buf[..], ENCRYPTED_CBC);
+        print_ifeq_res(buf.iter(), ENCRYPTED_CBC.iter());
     }
 
     ctx = ctx.with_normalkey(NORM_KEY);
@@ -45,34 +50,34 @@ pub fn main() {
         gfx::log(b"Starting AES-CBC encryption (normal)... ");
         buf.copy_from_slice(TEXT);
         ctx.crypt128(aes::Mode::CBC, aes::Direction::Encrypt, &mut buf[..], Some(IV));
-        print_ifeq_res(&buf[..], ENCRYPTED_CBC);
+        print_ifeq_res(buf.iter(), ENCRYPTED_CBC.iter());
 
         gfx::log(b"Starting AES-CBC decryption (normal)... ");
         buf.copy_from_slice(ENCRYPTED_CBC);
         ctx.crypt128(aes::Mode::CBC, aes::Direction::Decrypt, &mut buf[..], Some(IV));
-        print_ifeq_res(&buf[..], TEXT);
+        print_ifeq_res(buf.iter(), TEXT.iter());
 
         gfx::log(b"Starting AES-ECB encryption (normal)... ");
         buf.copy_from_slice(TEXT);
         ctx.crypt128(aes::Mode::ECB, aes::Direction::Encrypt, &mut buf[..], Some(IV));
-        print_ifeq_res(&buf[..], ENCRYPTED_ECB);
+        print_ifeq_res(buf.iter(), ENCRYPTED_ECB.iter());
 
         gfx::log(b"Starting AES-ECB decryption (normal)... ");
         buf.copy_from_slice(ENCRYPTED_ECB);
         ctx.crypt128(aes::Mode::ECB, aes::Direction::Decrypt, &mut buf[..], Some(IV));
-        print_ifeq_res(&buf[..], TEXT);
+        print_ifeq_res(buf.iter(), TEXT.iter());
 
         let mut ctr = [0u8;16];
 
         gfx::log(b"Starting AES-CTR encryption (full)... ");
         buf.copy_from_slice(TEXT);
         ctx.crypt128(aes::Mode::CTR, aes::Direction::Encrypt, &mut buf[..], Some(IV));
-        print_ifeq_res(&buf[..], ENCRYPTED_CTR);
+        print_ifeq_res(buf.iter(), ENCRYPTED_CTR.iter());
 
         gfx::log(b"Starting AES-CTR decryption (full)... ");
         buf.copy_from_slice(ENCRYPTED_CTR);
         ctx.crypt128(aes::Mode::CTR, aes::Direction::Decrypt, &mut buf[..], Some(IV));
-        print_ifeq_res(&buf[..], TEXT);
+        print_ifeq_res(buf.iter(), TEXT.iter());
 
         gfx::log(b"Starting AES-CTR encryption (block-wise)... ");
         buf.copy_from_slice(TEXT);
@@ -80,7 +85,7 @@ pub fn main() {
         ctx.crypt128(aes::Mode::CTR, aes::Direction::Encrypt, &mut buf[0..16], Some(&ctr));
         ctr = aes::ctr_add(&ctr, aes::buf_num_blocks(&buf[0..16]).unwrap());
         ctx.crypt128(aes::Mode::CTR, aes::Direction::Encrypt, &mut buf[16..], Some(&ctr));
-        print_ifeq_res(&buf[..], ENCRYPTED_CTR);
+        print_ifeq_res(buf.iter(), ENCRYPTED_CTR.iter());
 
         gfx::log(b"Starting AES-CTR decryption (block-wise)... ");
         buf.copy_from_slice(ENCRYPTED_CTR);
@@ -88,6 +93,13 @@ pub fn main() {
         ctx.crypt128(aes::Mode::CTR, aes::Direction::Decrypt, &mut buf[0..16], Some(&ctr));
         ctr = aes::ctr_add(&ctr, aes::buf_num_blocks(&buf[0..16]).unwrap());
         ctx.crypt128(aes::Mode::CTR, aes::Direction::Decrypt, &mut buf[16..], Some(&ctr));
-        print_ifeq_res(&buf[..], TEXT);
+        print_ifeq_res(buf.iter(), TEXT.iter());
+
+        gfx::log(b"Starting AES-ECB decryption (output-le)... ");
+        buf.copy_from_slice(ENCRYPTED_ECB);
+        ctx = ctx.with_output_le(true);
+        ctx.crypt128(aes::Mode::ECB, aes::Direction::Decrypt, &mut buf[..], Some(IV));
+        ctx = ctx.with_output_le(false);
+        print_ifeq_res(buf.iter(), reverse_word_bytes(TEXT));
     }
 }
