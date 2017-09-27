@@ -5,7 +5,10 @@ use gfx::Bitmap3;
 pub static SCREEN_WIDTH: usize = 240;
 pub static SCREEN_HEIGHT: usize = 400;
 fn top_screen_addr() -> u32 {
-    unsafe { *(0x23FFFE00 as *mut u32) }
+    extern {
+        static TOP_FRAMEBUF_START: u32;
+    }
+    unsafe { TOP_FRAMEBUF_START }
 }
 
 unsafe fn draw_pixel(fb_addr: u32, pos: (usize, usize), r: u8, g: u8, b: u8) {

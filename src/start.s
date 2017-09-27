@@ -12,13 +12,13 @@
 .extern enable_interrupts
 .extern wait_for_interrupt
 
-_brahma_init:
-	b start
-@ This is just a placeholder, and it will be replaced
-@ with the real address by the brahma loader
-ret_addr: .word 0xFFFF0000
-
 start:
+    @ Save screen address pointer
+    ldr r0, =TOP_FRAMEBUF_START
+    ldr r1, [r1, #4] @ load fbs_ptr from argv[1]
+    ldr r1, [r1]     @ load fb0_top from fbs_ptr
+    str r1, [r0]     @ store fb0 to TOP_FRAMEBUF_START
+
 	@ Clear BSS
 	mov r0, #0
 	ldr r1, =bss_start
@@ -68,3 +68,6 @@ end:
 	b end
 
 .ltorg
+
+.global TOP_FRAMEBUF_START
+TOP_FRAMEBUF_START: .word 0

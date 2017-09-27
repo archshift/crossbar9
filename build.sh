@@ -26,4 +26,4 @@ TARGET_BIN="${TARGET_DIR}/crossbar9.bin"
 TARGET_FIRM="${TARGET_DIR}/crossbar9.firm"
 
 arm-none-eabi-objcopy -O binary -I elf32-littlearm "$TARGET_ELF" "$TARGET_BIN" || exit -1
-./firmtool/firmtool build "$TARGET_FIRM" -n 0x23F00000 -e 0 -D "$TARGET_BIN" -A 0x23F00000 -C NDMA || exit -1
+./firmtool/firmtool build "$TARGET_FIRM" -i -n 0x23F00000 -e 0 -D "$TARGET_BIN" -A 0x23F00000 -C NDMA || exit -1
