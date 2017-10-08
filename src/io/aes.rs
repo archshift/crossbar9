@@ -68,22 +68,9 @@ pub enum Direction {
     Decrypt
 }
 
-pub struct Byte4Iter<'a>(slice::Chunks<'a, u8>);
-impl<'a> Byte4Iter<'a> {
-    pub fn new(slice: &'a [u8]) -> Byte4Iter<'a> {
-        assert!(slice.len() % 4 == 0);
-        Byte4Iter(slice.chunks(4))
-    }
-}
-impl<'a> Iterator for Byte4Iter<'a> {
-    type Item = [u8;4];
-    fn next(&mut self) -> Option<Self::Item> {
-        if let Some(b) = self.0.next() {
-            Some([b[0], b[1], b[2], b[3]])
-        } else {
-            None
-        }
-    }
+fn byte4iter<'a>(slice: &'a [u8]) -> impl Iterator<Item = [u8;4]> + 'a {
+    assert!(slice.len() % 4 == 0);
+    slice.chunks(4).map(|c| [c[0], c[1], c[2], c[3]])
 }
 
 fn u128_bytes(mut num: u128) -> [u8;0x10] {
@@ -124,6 +111,7 @@ pub struct AesContext<'a> {
     keywriter: fn(&AesContext, u8, &[u8], Option<&[u8]>),
     key: Option<&'a [u8]>,
     key_y: Option<&'a [u8]>,
+    input_le: bool,
     output_le: bool,
 }
 
@@ -135,6 +123,7 @@ impl<'a> AesContext<'a> {
             keywriter: keywriter::anykey,
             key: None,
             key_y: None,
+            input_le: false,
             output_le: false,
         })
     }
@@ -155,6 +144,10 @@ impl<'a> AesContext<'a> {
         AesContext { key: Some(keyx), key_y: Some(keyy), ..self }
     }
 
+    pub fn with_input_le(mut self, state: bool) -> AesContext<'a> {
+        AesContext { input_le: state, ..self }
+    }
+
     pub fn with_output_le(mut self, state: bool) -> AesContext<'a> {
         AesContext { output_le: state, ..self }
     }
@@ -165,7 +158,7 @@ impl<'a> AesContext<'a> {
         bf!(cnt @ CntReg::flush_fifo_out = 1);
         bf!(cnt @ CntReg::out_big_endian = !self.output_le as u32);
         bf!(cnt @ CntReg::out_normal_order = 1);
-        bf!(cnt @ CntReg::in_big_endian = 1);
+        bf!(cnt @ CntReg::in_big_endian = !self.input_le as u32);
         bf!(cnt @ CntReg::in_normal_order = 1);
         write_reg(Reg::CNT, cnt);
 
@@ -186,7 +179,7 @@ impl<'a> AesContext<'a> {
             if let Some(iv) = iv_ctr {
                 assert!(iv.len() == 0x10);
 
-                let mut iv_it = Byte4Iter::new(iv);
+                let mut iv_it = byte4iter(iv);
                 let mut iv_word_it = iv_words.iter_mut().rev();
 
                 for (word, bytes4) in iv_word_it.zip(iv_it) {
@@ -235,15 +228,14 @@ impl<'a> AesContext<'a> {
             while pos < msg.len() {
                 while fifo_in_full() { }
 
-                for bytes4 in Byte4Iter::new(&msg[pos .. pos + 16]) {
+                for bytes4 in byte4iter(&msg[pos .. pos + 16]) {
                     write_reg::<[u8;4]>(Reg::FIFO_IN, bytes4);
                 }
 
                 while fifo_out_empty() { }
 
-                for i in 0..4 {
-                    let bytes: [u8; 4] = read_reg(Reg::FIFO_OUT);
-                    msg[pos + i*4 .. pos + i*4+4].copy_from_slice(&bytes[..]);
+                for c in msg[pos .. pos + 16].chunks_mut(4) {
+                    c.copy_from_slice(&read_reg::<[u8;4]>(Reg::FIFO_OUT));
                 }
 
                 pos += 16;
@@ -264,13 +256,13 @@ pub mod keywriter {
                       else { Reg::KEY_FIFO };
 
         assert!(key.len() == 0x10);
-        for bytes4 in Byte4Iter::new(key) {
+        for bytes4 in byte4iter(key) {
             write_reg::<[u8;4]>(key_reg, bytes4);
         }
 
         if let Some(y) = key_y {
             assert!(y.len() == 0x10);
-            for bytes4 in Byte4Iter::new(y) {
+            for bytes4 in byte4iter(y) {
                 write_reg::<[u8;4]>(Reg::KEYY_FIFO, bytes4);
             }
 
