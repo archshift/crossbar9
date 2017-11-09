@@ -1,17 +1,21 @@
 {
     "arch": "arm",
     "cpu": "arm946e-s",
-    "disable-redzone": true,
-    "executables": true,
     "llvm-target": "thumbv5te-none-eabi",
-    "morestack": false,
     "os": "none",
+    
+    "data-layout": "e-m:e-p:32:32-i64:64-v128:64:128-a:0:32-n32-S64",
     "relocation-model": "static",
     "target-endian": "little",
     "target-pointer-width": "32",
     "target-c-int-width": "32",
+    "features": "+soft-float,+strict-align",
+    
     "no-compiler-rt": true,
-    "data-layout": "e-m:e-p:32:32-i64:64-v128:64:128-a:0:32-n32-S64",
+    "disable-redzone": true,
+    "executables": true,
+    "morestack": false,
+    
     "linker-flavor": "gcc",
     "linker-is-gnu": true,
     "pre-link-args": {
