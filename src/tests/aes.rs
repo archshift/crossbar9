@@ -32,6 +32,14 @@ fn reverse_word_bytes<'a>(buf: &'a mut [u8]) {
     }
 }
 
+fn with_reverse_words<'a>(buf: &'a [u8]) -> impl Iterator<Item = &'a u8> {
+    buf.chunks(4).rev().flat_map(|c| c.iter())
+}
+
+fn with_reverse_words_in_block<'a>(buf: &'a [u8]) -> impl Iterator<Item = &'a u8> {
+    buf.chunks(16).flat_map(|c| with_reverse_words(c))
+}
+
 fn with_reverse_word_bytes<'a>(buf: &'a [u8]) -> impl Iterator<Item = &'a u8> {
     buf.chunks(4).flat_map(|c| c.iter().rev())
 }
@@ -108,6 +116,13 @@ fn test_normkey() {
     ctx.crypt128(aes::Mode::ECB, aes::Direction::Decrypt, &mut buf[..], Some(IV));
     ctx = ctx.with_output_le(false);
     print_ifeq_res(buf.iter(), with_reverse_word_bytes(TEXT));
+
+    gfx::log(b"Starting AES-ECB decryption (output-rev)... ");
+    buf.copy_from_slice(ENCRYPTED_ECB);
+    ctx = ctx.with_output_rev_words(true);
+    ctx.crypt128(aes::Mode::ECB, aes::Direction::Decrypt, &mut buf[..], Some(IV));
+    ctx = ctx.with_output_rev_words(false);
+    print_ifeq_res(buf.iter(), with_reverse_words_in_block(TEXT));
 }
 
 #[inline(never)]

@@ -113,6 +113,7 @@ pub struct AesContext<'a> {
     key_y: Option<&'a [u8]>,
     input_le: bool,
     output_le: bool,
+    output_rev_words: bool,
 }
 
 impl<'a> AesContext<'a> {
@@ -125,6 +126,7 @@ impl<'a> AesContext<'a> {
             key_y: None,
             input_le: false,
             output_le: false,
+            output_rev_words: false,
         })
     }
 
@@ -152,12 +154,16 @@ impl<'a> AesContext<'a> {
         AesContext { output_le: state, ..self }
     }
 
+    pub fn with_output_rev_words(mut self, state: bool) -> AesContext<'a> {
+        AesContext { output_rev_words: state, ..self }
+    }
+
     pub fn crypt128(&self, mode: Mode, direction: Direction, msg: &mut [u8], iv_ctr: Option<&[u8]>) {
         let mut cnt = 0;
         bf!(cnt @ CntReg::flush_fifo_in = 1);
         bf!(cnt @ CntReg::flush_fifo_out = 1);
         bf!(cnt @ CntReg::out_big_endian = !self.output_le as u32);
-        bf!(cnt @ CntReg::out_normal_order = 1);
+        bf!(cnt @ CntReg::out_normal_order = !self.output_rev_words as u32);
         bf!(cnt @ CntReg::in_big_endian = !self.input_le as u32);
         bf!(cnt @ CntReg::in_normal_order = 1);
         write_reg(Reg::CNT, cnt);
@@ -229,13 +235,15 @@ impl<'a> AesContext<'a> {
                 while fifo_in_full() { }
 
                 for bytes4 in byte4iter(&msg[pos .. pos + 16]) {
-                    write_reg::<[u8;4]>(Reg::FIFO_IN, bytes4);
+                    write_reg::<u32>(Reg::FIFO_IN, unsafe { mem::transmute(bytes4) });
                 }
 
                 while fifo_out_empty() { }
 
                 for c in msg[pos .. pos + 16].chunks_mut(4) {
-                    c.copy_from_slice(&read_reg::<[u8;4]>(Reg::FIFO_OUT));
+                    let data = read_reg::<u32>(Reg::FIFO_OUT);
+                    let data_bytes: [u8; 4] = unsafe { mem::transmute(data) };
+                    c.copy_from_slice(&data_bytes);
                 }
 
                 pos += 16;
@@ -257,13 +265,13 @@ pub mod keywriter {
 
         assert!(key.len() == 0x10);
         for bytes4 in byte4iter(key) {
-            write_reg::<[u8;4]>(key_reg, bytes4);
+            write_reg::<u32>(key_reg, unsafe { mem::transmute(bytes4) });
         }
 
         if let Some(y) = key_y {
             assert!(y.len() == 0x10);
             for bytes4 in byte4iter(y) {
-                write_reg::<[u8;4]>(Reg::KEYY_FIFO, bytes4);
+                write_reg::<u32>(Reg::KEYY_FIFO, unsafe { mem::transmute(bytes4) });
             }
 
         }
