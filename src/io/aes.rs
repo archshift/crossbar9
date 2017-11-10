@@ -40,7 +40,7 @@ bfdesc!(CntReg: u32, {
 
 bfdesc!(KeyCntReg: u8, {
     keyslot: 0 => 5,
-    use_dsi_keygen: 6 => 6,
+    force_dsi_keygen: 6 => 6,
     enable_fifo_flush: 7 => 7
 });
 
@@ -114,6 +114,7 @@ pub struct AesContext<'a> {
     input_le: bool,
     output_le: bool,
     output_rev_words: bool,
+    force_dsi_keygen: bool
 }
 
 impl<'a> AesContext<'a> {
@@ -127,6 +128,7 @@ impl<'a> AesContext<'a> {
             input_le: false,
             output_le: false,
             output_rev_words: false,
+            force_dsi_keygen: false
         })
     }
 
@@ -156,6 +158,10 @@ impl<'a> AesContext<'a> {
 
     pub fn with_output_rev_words(mut self, state: bool) -> AesContext<'a> {
         AesContext { output_rev_words: state, ..self }
+    }
+
+    pub fn force_dsi_keygen(mut self, force: bool) -> AesContext<'a> {
+        AesContext { force_dsi_keygen: force, ..self }
     }
 
     pub fn crypt128(&self, mode: Mode, direction: Direction, msg: &mut [u8], iv_ctr: Option<&[u8]>) {
@@ -258,6 +264,7 @@ pub mod keywriter {
         let mut key_cnt = 0;
         bf!(key_cnt @ KeyCntReg::keyslot = keyslot);
         bf!(key_cnt @ KeyCntReg::enable_fifo_flush = 1);
+        bf!(key_cnt @ KeyCntReg::force_dsi_keygen = ctx.force_dsi_keygen as u8);
         write_reg(Reg::KEY_CNT, key_cnt);
 
         let key_reg = if key_y.is_some() { Reg::KEYX_FIFO }
