@@ -186,6 +186,19 @@ fn test_rev_keypair() {
     print_ifeq_res(buf.iter(), TEXT.iter());
 }
 
+pub fn test_twl_keyslot() {
+    let mut buf = [0u8;32];
+    let mut ctx = aes::AesContext::new().unwrap()
+        .with_normalkey(NORM_KEY)
+        .with_keyslot(0x3)
+        .with_keywriter(aes::keywriter::twlkey);
+
+    gfx::log(b"Starting AES-ECB encryption (twlslot, normal)... ");
+    buf.copy_from_slice(TEXT);
+    ctx.crypt128(aes::Mode::ECB, aes::Direction::Encrypt, &mut buf[..], None);
+    print_ifeq_res(buf.iter(), ENCRYPTED_ECB.iter());
+}
+
 pub fn main() {
     gfx::clear_screen(0xFF, 0xFF, 0xFF);
 
@@ -193,4 +206,5 @@ pub fn main() {
     test_normkey();
     test_rev_normkey();
     test_rev_keypair();
+    test_twl_keyslot();
 }

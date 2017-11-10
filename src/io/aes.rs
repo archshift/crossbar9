@@ -13,9 +13,20 @@ enum Reg {
     KEY_SEL = 0x010,
     KEY_CNT = 0x011,
     CTR = 0x020,
+    TWL_KEY0 = 0x040,
+    TWL_KEY1 = 0x070,
+    TWL_KEY2 = 0x0A0,
+    TWL_KEY3 = 0x0D0,
     KEY_FIFO = 0x100,
     KEYX_FIFO = 0x104,
     KEYY_FIFO = 0x108
+}
+
+#[derive(Clone, Copy)]
+enum TwlKeyReg {
+    NORMAL = 0x00,
+    KEYX = 0x10,
+    KEYY = 0x20
 }
 
 bfdesc!(CntReg: u32, {
@@ -52,6 +63,13 @@ fn read_reg<T: Copy>(reg: Reg) -> T {
 #[inline(never)]
 fn write_reg<T: Copy>(reg: Reg, val: T) {
     unsafe { intrinsics::volatile_store((AES_BASE + reg as u32) as *mut T, val); }
+}
+
+#[inline(never)]
+fn write_reg_twlkey<T: Copy>(keyslot: u8, target: TwlKeyReg, val: T) {
+    assert!(keyslot < 4);
+    let reg = Reg::TWL_KEY0 as u32 + (keyslot as u32) * 0x30;
+    unsafe { intrinsics::volatile_store((AES_BASE + reg + target as u32) as *mut T, val); }
 }
 
 #[derive(Clone, Copy)]
@@ -280,7 +298,23 @@ pub mod keywriter {
             for bytes4 in byte4iter(y) {
                 write_reg::<u32>(Reg::KEYY_FIFO, unsafe { mem::transmute(bytes4) });
             }
+        }
+    }
 
+    pub fn twlkey(ctx: &AesContext, keyslot: u8, key: &[u8], key_y: Option<&[u8]>) {
+        assert!(keyslot < 4);
+        let mut key_cnt = 0;
+        bf!(key_cnt @ KeyCntReg::keyslot = keyslot);
+        write_reg(Reg::KEY_CNT, key_cnt);
+
+        if let Some(y) = key_y {
+            unimplemented!();
+        } else {
+            let mut buf = [0u8; 16];
+            buf.copy_from_slice(key);
+            let mut buf: [u32; 4] = unsafe { mem::transmute(buf) };
+            buf.reverse();
+            write_reg_twlkey::<[u32;4]>(keyslot, TwlKeyReg::NORMAL, buf);
         }
     }
 }
