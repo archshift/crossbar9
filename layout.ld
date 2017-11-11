@@ -4,6 +4,9 @@ __aeabi_unwind_cpp_pr2 = abort;
 __exidx_start          = abort;
 __exidx_end            = abort;
 
+__aeabi_memcpy         = memcpy;
+__aeabi_memcpy4        = memcpy;
+
 ENTRY(start)
 SECTIONS
 {
