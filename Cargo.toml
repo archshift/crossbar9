@@ -24,6 +24,7 @@ gcc = "0.3.25"
 [features]
 aes = []
 hello_world = []
+ndma = []
 rsa = []
 sleep = []
 sha = []
