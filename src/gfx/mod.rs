@@ -1,4 +1,5 @@
 mod screen;
+#[macro_use]
 mod text;
 
 pub use self::screen::*;

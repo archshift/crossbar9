@@ -1,8 +1,6 @@
 use io::sha;
 use gfx;
 
-use core::fmt::Write;
-
 static INPUTS: [&[u8]; 7] = [
     b"",
     b"a",
@@ -55,7 +53,7 @@ static SUMS_256: [&[u8]; 7] = [
 
 fn match_hexstr(bytes: &[u8], hex_str: &[u8]) -> bool {
     if hex_str.len() != bytes.len() * 2 {
-        write!(gfx::LogWriter, "Size mismatch: hex {} bytes vs data {} bytes", hex_str.len(), bytes.len() * 2);
+        log!("Size mismatch: hex {} bytes vs data {} bytes", hex_str.len(), bytes.len() * 2);
         return false; // Sizes don't match
     }
 
@@ -72,7 +70,7 @@ fn match_hexstr(bytes: &[u8], hex_str: &[u8]) -> bool {
         };
         let hex_byte = to_num(*top_n) << 4 | to_num(*bot_n);
         if *src_byte != hex_byte {
-            write!(gfx::LogWriter, "Failed, byte {:02X} vs hex {}{}", *src_byte, *top_n as char, *bot_n as char);
+            log!("Failed, byte {:02X} vs hex {}{}", *src_byte, *top_n as char, *bot_n as char);
             return false;
         }
     }
@@ -81,21 +79,19 @@ fn match_hexstr(bytes: &[u8], hex_str: &[u8]) -> bool {
 
 fn test_hashes<OUT>(name: &str, func: fn(&[u8]) -> OUT, sums: &[&[u8]])
         where OUT: AsRef<[u8]> {
-    write!(gfx::LogWriter, "Testing {} hashes...", name);
+    print!("Testing {} hashes...", name);
     for (input, hashstr) in INPUTS.iter().zip(sums.iter()) {
         let hash = func(input);
         if match_hexstr(hash.as_ref(), hashstr) {
-            gfx::log(b"SUCCESS ");
+            print!("SUCCESS ");
         } else {
-            gfx::log(b"FAILURE ");
+            print!("FAILURE ");
         }
     }
-    gfx::log(b"!\n");
+    log!("!");
 }
 
 pub fn main() {
-    use core::fmt::Write;
-    let mut logger = gfx::LogWriter;
     gfx::clear_screen(0xFF, 0xFF, 0xFF);
 
     test_hashes("SHA1", sha::hash_160, &SUMS_160);

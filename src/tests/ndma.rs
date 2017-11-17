@@ -1,4 +1,3 @@
-use core::fmt::Write;
 use core::mem;
 
 use gfx;
@@ -17,7 +16,7 @@ pub fn main() {
 
     let mut dst_data = make_data();
 
-    gfx::log(b"Starting NDMA memory fill... ");
+    print!("Starting NDMA memory fill... ");
     let src = ndma::NdmaSrc::FillData(0);
     let dst = ndma::NdmaDst::LinearBuf(dst_data.as_mut_ptr(), dst_data.len());
     ndma::mem_transfer(src, dst);
@@ -26,7 +25,7 @@ pub fn main() {
     gfx::log(if ok { b"SUCCEEDED!\n" } else { b"FAILED!\n" });
 
 
-    gfx::log(b"Starting NDMA memory copy... ");
+    print!("Starting NDMA memory copy... ");
     let src_data = make_data();
     dst_data = [0u32; 0x200];
     let src = ndma::NdmaSrc::LinearBuf(src_data.as_ptr(), src_data.len());
@@ -37,7 +36,7 @@ pub fn main() {
     gfx::log(if ok { b"SUCCEEDED!\n" } else { b"FAILED!\n" });
 
 
-    gfx::log(b"Starting NDMA memory copy (fixed-src)... ");
+    print!("Starting NDMA memory copy (fixed-src)... ");
     let src_data = 0xF000BAAA;
     dst_data = [0u32; 0x200];
     let src = ndma::NdmaSrc::FixedAddr(&src_data);
@@ -49,7 +48,7 @@ pub fn main() {
 
 
     // Shows that NDMA actually loads from memory with each store
-    gfx::log(b"Starting NDMA memory copy (rand-src)... ");
+    print!("Starting NDMA memory copy (rand-src)... ");
     let mut dst_data = [0u32; 0x500];
     let src = ndma::NdmaSrc::FixedAddr(0x10011000 as *const u32);
     let dst = ndma::NdmaDst::LinearBuf(dst_data.as_mut_ptr(), dst_data.len());

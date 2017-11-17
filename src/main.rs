@@ -7,6 +7,7 @@ extern crate bitutils;
 extern crate rlibc;
 
 mod ffistr;
+#[macro_use]
 mod gfx;
 mod io;
 pub mod interrupts;
@@ -20,7 +21,7 @@ mod unique;
 pub extern fn main() {
     tests::main();
 
-    ::gfx::log(b"Press SELECT to power off.\n");
-    while !::io::hid::buttons_pressed().0[::io::hid::Button::SELECT.trailing_zeros() as usize] {}
-    ::power::power_off()
+    log!("Press SELECT to power off.");
+    while !io::hid::buttons_pressed().0[io::hid::Button::SELECT.trailing_zeros() as usize] {}
+    power::power_off()
 }

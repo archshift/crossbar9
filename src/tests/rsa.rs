@@ -50,21 +50,21 @@ static TEXT: &[u8] = b"Na na na na, na na na na, heey heeey heeeeey, \
 pub fn main() {
     gfx::clear_screen(0xFF, 0xFF, 0xFF);
 
-    gfx::log(b"Starting enc/dec (normal)... ");
+    print!("Starting enc/dec (normal)... ");
     let encrypted = rsa::crypt_2048(PUBKEY, MODULUS, TEXT);
     let bytes = rsa::crypt_2048(PRIVKEY, MODULUS, &encrypted[..]);
     if &bytes[..] == TEXT {
-        gfx::log(b"SUCCEEDED!\n");
+        log!("SUCCEEDED!");
     } else {
-        gfx::log(b"FAILED!\n");
+        log!("FAILED!");
     }
 
-    gfx::log(b"Starting enc/dec (reverse)... ");
+    print!("Starting enc/dec (reverse)... ");
     let encrypted_rev = rsa::crypt_2048_opt(PUBKEY, MODULUS, TEXT, false, false);
     let bytes_rev = rsa::crypt_2048_opt(PRIVKEY, MODULUS, &encrypted_rev[..], false, false);
     if &bytes_rev[..] == TEXT {
-        gfx::log(b"SUCCEEDED!\n");
+        log!("SUCCEEDED!");
     } else {
-        gfx::log(b"FAILED!\n");
+        log!("FAILED!");
     }
 }

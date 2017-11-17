@@ -2,14 +2,29 @@ use core::fmt;
 
 use gfx::{Bitmap3, blit, SCREEN_WIDTH, SCREEN_HEIGHT};
 
-static FONT: &'static [u8; 0x2400] = include_bytes!("font.data");
+static FONT: [u8; 0x2400] = *include_bytes!("font.data");
 
-fn draw_letter(pos: (usize, usize), letter: u8) {
-    let font_bmp = Bitmap3 {
-        bytes: &FONT[..],
+macro_rules! print {
+    ($($tok:tt)*) => {{
+        use ::core::fmt::Write;
+        write!(::gfx::LogWriter, $($tok)*).unwrap();
+    }};
+}
+
+macro_rules! log {
+    ($($tok:tt)*) => {{ print!($($tok)*); print!("\n"); }};
+}
+
+fn draw_letter(pos: (usize, usize), mut letter: u8) {
+    static font_bmp: Bitmap3 = Bitmap3 {
+        bytes: &FONT,
         rect: (128, 24),
         skip_pixels: 0
     };
+
+    if letter >= 128 {
+        panic!("Tried to print non-ascii letter! data=0x{:02X}", letter);
+    }
 
     let letter_num_cols = 32;
     let letter_size = (3, 6);
@@ -40,6 +55,10 @@ pub fn reset_log_cursor() {
 }
 
 pub fn log(string: &[u8]) {
+    log_iter(string.iter().map(|x|*x));
+}
+
+pub fn log_iter<I: Iterator<Item = u8>>(it: I) {
     let (mut x, mut y) = unsafe { (CURSOR.0, CURSOR.1) };
 
     let newline = |x: &mut usize, y: &mut usize| {
@@ -50,15 +69,15 @@ pub fn log(string: &[u8]) {
         }
     };
 
-    for c in string {
-        if *c == b'\n' {
+    for c in it {
+        if c == b'\n' {
             newline(&mut x, &mut y);
         } else {
             if x + 4 >= SCREEN_WIDTH {
                 newline(&mut x, &mut y);
             }
 
-            draw_letter((x, y), *c);
+            draw_letter((x, y), c);
             x += 4;
         }
     }
@@ -70,7 +89,8 @@ pub struct LogWriter;
 
 impl fmt::Write for LogWriter {
     fn write_str(&mut self, s: &str) -> Result<(), fmt::Error> {
-        log(s.as_bytes());
+        log_iter(s.as_bytes().iter().cloned());
+        // log_iter(s.chars().flat_map(|c|c.escape_unicode()).map(|c|c as u8));
         Ok(())
     }
 }
