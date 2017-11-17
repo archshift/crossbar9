@@ -46,23 +46,27 @@ fn write_reg<T: Copy>(reg: Reg, val: T, channel: u32) {
 pub enum NdmaSrc {
     FillData(u32),
     FixedAddr(*const u32),
-    CycleBuf(*const u32, usize),
     LinearBuf(*const u32, usize),
 }
 
 pub enum NdmaDst {
     FixedAddr(*mut u32),
-    CycleBuf(*mut u32, usize),
     LinearBuf(*mut u32, usize)
 }
 
 impl NdmaSrc {
     fn max_xfer_words(&self) -> Option<usize> {
         match *self {
-            NdmaSrc::FillData(_)
-            | NdmaSrc::FixedAddr(_)
-            | NdmaSrc::CycleBuf(_, _) => None,
+            NdmaSrc::FillData(_) | NdmaSrc::FixedAddr(_)  => None,
             NdmaSrc::LinearBuf(_, len) => Some(len),
+        }
+    }
+
+    fn src_type_index(&self) -> u32 {
+        match *self {
+            NdmaSrc::FillData(_) => 3,
+            NdmaSrc::FixedAddr(_) => 2,
+            NdmaSrc::LinearBuf(_, _) => 0 // Increasing
         }
     }
 }
@@ -70,20 +74,31 @@ impl NdmaSrc {
 impl NdmaDst {
     fn max_xfer_words(&self) -> Option<usize> {
         match *self {
-            NdmaDst::FixedAddr(_) | NdmaDst::CycleBuf(_, _) => None,
+            NdmaDst::FixedAddr(_) => None,
             NdmaDst::LinearBuf(_, len) => Some(len),
+        }
+    }
+
+    fn dst_type_index(&self) -> u32 {
+        match *self {
+            NdmaDst::FixedAddr(_) => 2,
+            NdmaDst::LinearBuf(_, _) => 0 // Increasing
         }
     }
 }
 
 fn max_xfer_words(src: &NdmaSrc, dst: &NdmaDst, limit: Option<usize>) -> usize {
-    [src.max_xfer_words(), dst.max_xfer_words(), limit].iter()
-        .filter_map(|x| *x)
-        .max()
-        .unwrap()
+    let vals = [src.max_xfer_words(), dst.max_xfer_words(), limit];
+    let mut it = vals.iter().filter_map(|x| *x);
+    let size = it.next()
+        .expect("Cannot NDMA with inconsistent buffer sizes!");
+    if !it.all(|item| item == size) {
+        panic!("Cannot NDMA with no defined transfer size!");
+    }
+    size
 }
 
-pub fn mem_transfer(src: NdmaSrc, dst: NdmaDst) -> usize {
+pub fn mem_transfer(src: NdmaSrc, dst: NdmaDst) {
     // Ensure global settings
     let channel = 1;
 
@@ -101,25 +116,21 @@ pub fn mem_transfer(src: NdmaSrc, dst: NdmaDst) -> usize {
             write_reg(Reg::FILL_DATA, data, channel);
             bf!(cnt @ RegCnt::src_update_method = 3); // Fill
         }
-        NdmaSrc::LinearBuf(ptr, words) => {
+        NdmaSrc::LinearBuf(ptr, _) | NdmaSrc::FixedAddr(ptr) => {
             if (ptr as u32) & 0b11 != 0 {
                 panic!("Tried to NDMA from a non-word-aligned address!");
             }
-
             write_reg(Reg::SRC_ADDR, ptr as u32, channel);
-            bf!(cnt @ RegCnt::src_update_method = 0); // Increment
         }
         _ => unimplemented!()
     }
 
     match dst {
-        NdmaDst::LinearBuf(ptr, words) => {
+        NdmaDst::LinearBuf(ptr, _) | NdmaDst::FixedAddr(ptr) => {
             if (ptr as u32) & 0b11 != 0 {
                 panic!("Tried to NDMA to a non-word-aligned address!");
             }
-
             write_reg(Reg::DST_ADDR, ptr as u32, channel);
-            bf!(cnt @ RegCnt::dst_update_method = 0); // Increment
         }
         _ => unimplemented!()
     }
@@ -127,10 +138,11 @@ pub fn mem_transfer(src: NdmaSrc, dst: NdmaDst) -> usize {
     let xfer_size = max_xfer_words(&src, &dst, None);
     write_reg(Reg::WRITE_CNT, xfer_size as u32, channel);
 
+    bf!(cnt @ RegCnt::src_update_method = src.src_type_index());
+    bf!(cnt @ RegCnt::dst_update_method = dst.dst_type_index());
     bf!(cnt @ RegCnt::mode_immediate = 1);
     bf!(cnt @ RegCnt::busy = 1); // Start
     write_reg(Reg::CNT, cnt, channel);
 
     while bf!((read_reg(Reg::CNT, channel)) @ RegCnt::busy) == 1 { }
-    xfer_size
 }
