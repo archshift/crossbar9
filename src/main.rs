@@ -6,9 +6,11 @@
 extern crate bitutils;
 extern crate rlibc;
 
-mod ffistr;
 #[macro_use]
 mod gfx;
+
+mod caches;
+mod ffistr;
 mod io;
 pub mod interrupts;
 pub mod intrinsics;

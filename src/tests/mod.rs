@@ -6,6 +6,7 @@ macro_rules! define_test {
 }
 
 define_test!("aes", aes);
+define_test!("caches", caches);
 define_test!("hello_world", hello_world);
 define_test!("ndma", ndma);
 define_test!("rsa", rsa);

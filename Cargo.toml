@@ -6,6 +6,7 @@ build = "build.rs"
 
 [profile.release]
 lto = true
+debug = true
 panic = "abort"
 
 [profile.dev]
@@ -23,6 +24,7 @@ gcc = "0.3.25"
 
 [features]
 aes = []
+caches = []
 hello_world = []
 ndma = []
 rsa = []
