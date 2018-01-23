@@ -4,7 +4,6 @@ use core::u16;
 
 use interrupts::{self, HandlerFn};
 use io::irq::{self, Interrupt};
-use unique;
 
 const SHA_BASE: u32 = 0x1000A000u32;
 

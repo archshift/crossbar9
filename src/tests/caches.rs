@@ -18,7 +18,7 @@ fn bench_busyloop(timer: &Timer) {
 pub fn main() {
     gfx::clear_screen(0xFF, 0xFF, 0xFF);
 
-    let timer = Timer::new(0, 0, Prescaler::Div1, None).unwrap();
+    let timer = Timer::new(lease!(TIMER0), 0, 0, Prescaler::Div1, None);
     timer.start();
 
     log!("Caches disabled...");

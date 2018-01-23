@@ -1,18 +1,22 @@
 use interrupts;
 use io::timer;
 
+use core::mem::transmute;
+
 static mut rt_timer: Option<*const timer::Timer> = None;
 
 // Borrowing shim for the global timer
 pub struct SleepTimer<'a> {
     #[allow(dead_code)]
-    timer_ref: &'a timer::Timer
+    timer_ref: &'a timer::Timer<'a>
 }
 
 impl<'a> SleepTimer<'a> {
-    pub fn new(timer_ref: &'a timer::Timer) -> SleepTimer {
+    pub fn new(timer_ref: &'a timer::Timer<'a>) -> SleepTimer {
         timer_ref.start();
-        unsafe { rt_timer = Some(timer_ref as *const timer::Timer); }
+
+        let timer_ptr = timer_ref as *const timer::Timer<'a>;
+        unsafe { rt_timer = Some(transmute(timer_ptr)); }
         SleepTimer {
             timer_ref: timer_ref,
         }

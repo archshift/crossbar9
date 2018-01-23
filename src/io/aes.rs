@@ -137,7 +137,6 @@ pub struct AesContext<'a> {
 
 impl<'a> AesContext<'a> {
     pub fn new() -> Result<AesContext<'a>, ()> {
-        // TODO: Check if other contexts are active and fail
         Ok(AesContext {
             keyslot: 0x3F,
             keywriter: keywriter::anykey,

@@ -8,16 +8,17 @@ extern crate rlibc;
 
 #[macro_use]
 mod gfx;
+#[macro_use]
+mod io;
 
 mod caches;
 mod ffistr;
-mod io;
+
 pub mod interrupts;
 pub mod intrinsics;
 mod power;
 mod realtime;
 pub mod tests;
-mod unique;
 
 #[no_mangle]
 pub extern fn main() {

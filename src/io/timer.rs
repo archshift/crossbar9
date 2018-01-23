@@ -2,8 +2,8 @@ use core::intrinsics;
 use core::u16;
 
 use interrupts::{self, HandlerFn};
+use io::arbiter as io_arbiter;
 use io::irq::{self, Interrupt};
-use unique;
 
 const TIMER_BASE: u32 = 0x10003000u32;
 
@@ -55,8 +55,6 @@ fn ticks_to_units(num_ticks: u64, prescaler: Prescaler, units_per_second: u32) -
     (num_ticks * units_per_second as u64) / scaled_tps
 }
 
-
-static mut timers_used: [bool; 4] = [false; 4];
 static mut timer_overflows: [u64; 4] = [0; 4];
 
 fn update_overflows_0() { unsafe { timer_overflows[0] += 1; } }
@@ -64,19 +62,8 @@ fn update_overflows_1() { unsafe { timer_overflows[1] += 1; } }
 fn update_overflows_2() { unsafe { timer_overflows[2] += 1; } }
 fn update_overflows_3() { unsafe { timer_overflows[3] += 1; } }
 
-#[derive(Debug)]
-pub enum Error {
-    ImproperIndex,
-    Unique(unique::Error),
-}
-
-impl From<unique::Error> for Error {
-    fn from(o: unique::Error) -> Error {
-        Error::Unique(o)
-    }
-}
-
-pub struct Timer {
+pub struct Timer<'a> {
+    lease: &'a mut io_arbiter::TimerLease,
     index: usize,
     val_reg: Reg,
     cnt_reg: Reg,
@@ -87,18 +74,16 @@ pub struct Timer {
     callback: Option<HandlerFn>
 }
 
-impl Timer {
-    pub fn new(index: usize, start_val: u16, prescaler: Prescaler,
-            callback: Option<HandlerFn>) -> Result<Timer, Error> {
-
-        unique::lock(unsafe { &mut timers_used[index] })?;
+impl<'a> Timer<'a> {
+    pub fn new(lease: &'a mut io_arbiter::TimerLease, index: usize, start_val: u16,
+               prescaler: Prescaler, callback: Option<HandlerFn>) -> Timer {
 
         let (val_reg, cnt_reg, int_type, overflow_fn) = match index {
             0 => (Reg::VAL_0, Reg::CNT_0, Interrupt::TIMER_0, update_overflows_0 as fn()),
             1 => (Reg::VAL_1, Reg::CNT_1, Interrupt::TIMER_1, update_overflows_1 as fn()),
             2 => (Reg::VAL_2, Reg::CNT_2, Interrupt::TIMER_2, update_overflows_2 as fn()),
             3 => (Reg::VAL_3, Reg::CNT_3, Interrupt::TIMER_3, update_overflows_3 as fn()),
-            _ => return Err(Error::ImproperIndex)
+            _ => panic!("Attempted to register timer of invalid index!")
         };
 
         if let Some(callback) = callback {
@@ -108,6 +93,7 @@ impl Timer {
         irq::set_enabled(int_type);
 
         let timer = Timer {
+            lease: lease,
             index: index,
             val_reg: val_reg,
             cnt_reg: cnt_reg,
@@ -119,7 +105,7 @@ impl Timer {
         };
 
         timer.reset();
-        Ok(timer)
+        timer
     }
 
     #[inline(always)]
@@ -183,14 +169,13 @@ impl Timer {
     }
 }
 
-impl Drop for Timer {
+impl<'a> Drop for Timer<'a> {
     fn drop(&mut self) {
         irq::set_disabled(self.interrupt_type);
         interrupts::unregister_handler(self.interrupt_type, self.overflow_fn);
         if let Some(callback) = self.callback {
             interrupts::unregister_handler(self.interrupt_type, callback);
         }
-        unique::unlock(unsafe { &mut timers_used[self.index] });
     }
 }
 
