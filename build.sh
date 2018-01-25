@@ -18,6 +18,7 @@ else
 fi
 
 export CC=arm-none-eabi-gcc
+export RUST_TARGET_PATH="$(pwd)"
 rustup run nightly xargo build --features "$FEATURE" $RELMODE_FLAG || exit -1
 
 TARGET_DIR="./target/${TARGET}/${RELMODE}"
