@@ -63,7 +63,7 @@ fn update_overflows_2() { unsafe { timer_overflows[2] += 1; } }
 fn update_overflows_3() { unsafe { timer_overflows[3] += 1; } }
 
 pub struct Timer<'a> {
-    lease: &'a mut io_arbiter::TimerLease,
+    lease: lease_ty!('a, TimerLease),
     index: usize,
     val_reg: Reg,
     cnt_reg: Reg,
@@ -75,7 +75,7 @@ pub struct Timer<'a> {
 }
 
 impl<'a> Timer<'a> {
-    pub fn new(lease: &'a mut io_arbiter::TimerLease, index: usize, start_val: u16,
+    pub fn new(lease: lease_ty!('a, TimerLease), index: usize, start_val: u16,
                prescaler: Prescaler, callback: Option<HandlerFn>) -> Timer {
 
         let (val_reg, cnt_reg, int_type, overflow_fn) = match index {
