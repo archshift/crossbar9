@@ -26,5 +26,6 @@ pub mod irq;
 pub mod mic;
 pub mod ndma;
 pub mod rsa;
+pub mod sdmmc;
 pub mod sha;
 pub mod timer;
