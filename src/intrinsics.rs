@@ -29,33 +29,3 @@ pub extern fn abort() -> ! {
         unsafe { ::interrupts::wait_for_interrupt() };
     }
 }
-
-extern {
-    fn memset(dest: *mut u8, val: i32, n: u32);
-}
-
-#[no_mangle]
-pub unsafe extern fn __aeabi_memset(dest: *mut u8, n: u32, val: i32) {
-    memset(dest, val, n);
-}
-#[no_mangle]
-pub unsafe extern fn __aeabi_memset4(dest: *mut u8, n: u32, val: i32) {
-    memset(dest, val, n);
-}
-#[no_mangle]
-pub unsafe extern fn __aeabi_memset8(dest: *mut u8, n: u32, val: i32) {
-    memset(dest, val, n);
-}
-
-#[no_mangle]
-pub unsafe extern fn __aeabi_memclr(dest: *mut u8, n: u32) {
-    memset(dest, 0, n);
-}
-#[no_mangle]
-pub unsafe extern fn __aeabi_memclr4(dest: *mut u8, n: u32) {
-    memset(dest, 0, n);
-}
-#[no_mangle]
-pub unsafe extern fn __aeabi_memclr8(dest: *mut u8, n: u32) {
-    memset(dest, 0, n);
-}
