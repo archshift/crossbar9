@@ -3,6 +3,7 @@ use core::ptr;
 pub const MIC_BASE: u32 = 0x10162000u32;
 
 #[derive(Clone, Copy)]
+#[allow(non_camel_case_types)]
 enum Reg {
     CNT = 0x00,
     DATA = 0x04,
@@ -26,14 +27,14 @@ pub enum SampleRate {
 }
 
 pub struct Mic<'a> {
-    lease: lease_ty!('a, MicLease)
+    _lease: lease_ty!('a, MicLease)
 }
 
 impl<'a> Mic<'a> {
     pub fn enable(lease: lease_ty!('a, MicLease), sample_rate: SampleRate) -> Mic {
         write_reg(Reg::CNT, 0xF002u16 | (sample_rate as u16) << 2);
         Mic {
-            lease: lease
+            _lease: lease
         }
     }
 

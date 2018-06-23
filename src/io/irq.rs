@@ -1,13 +1,21 @@
-use core::intrinsics;
+use io::RegEnum;
 
 pub const IRQ_BASE: u32 = 0x10001000u32;
 
 #[derive(Clone, Copy)]
+#[allow(non_camel_case_types)]
 enum Reg {
     ENABLED = 0x00,
     PENDING = 0x04,
 }
 
+impl RegEnum for Reg {
+    fn addr_of(&self) -> u32 {
+        IRQ_BASE + (*self as u32)
+    }
+}
+
+#[allow(non_snake_case)]
 pub mod Interrupt {
     pub const DMAC_1_0: u32      = 1 << 0;
     pub const DMAC_1_1: u32      = 1 << 1;
@@ -41,36 +49,26 @@ pub mod Interrupt {
     pub const DMAC_2_ABORT: u32  = 1 << 29;
 }
 
-#[inline(never)]
-fn read_reg<T: Copy>(reg: Reg) -> T {
-    unsafe { intrinsics::volatile_load((IRQ_BASE + reg as u32) as *const T) }
-}
-
-fn write_reg<T: Copy>(reg: Reg, val: T) {
-    unsafe { intrinsics::volatile_store((IRQ_BASE + reg as u32) as *mut T, val); }
-}
-
-
 pub fn set_enabled(interrupts: u32) {
-    write_reg(Reg::ENABLED, get_enabled() | interrupts);
+    Reg::ENABLED.write32(get_enabled() | interrupts);
 }
 
 pub fn set_disabled(interrupts: u32) {
-    write_reg(Reg::ENABLED, get_enabled() & !interrupts);
+    Reg::ENABLED.write32(get_enabled() & !interrupts);
 }
 
 pub fn get_enabled() -> u32 {
-    read_reg::<u32>(Reg::ENABLED)
+    Reg::ENABLED.read32()
 }
 
 pub fn get_pending() -> u32 {
-    read_reg::<u32>(Reg::ENABLED)
+    Reg::PENDING.read32()
 }
 
 pub fn clear_pending(interrupts: u32) {
-    write_reg(Reg::PENDING, interrupts)
+    Reg::PENDING.write32(interrupts)
 }
 
 pub fn clear_all_pending() {
-    write_reg(Reg::PENDING, !0u32);
+    Reg::PENDING.write32(!0u32);
 }

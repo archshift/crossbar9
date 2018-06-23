@@ -3,7 +3,7 @@ use io::timer;
 
 use core::mem::transmute;
 
-static mut rt_timer: Option<*const timer::Timer> = None;
+static mut RT_TIMER: Option<*const timer::Timer> = None;
 
 // Borrowing shim for the global timer
 pub struct SleepTimer<'a> {
@@ -16,7 +16,7 @@ impl<'a> SleepTimer<'a> {
         timer_ref.start();
 
         let timer_ptr = timer_ref as *const timer::Timer<'a>;
-        unsafe { rt_timer = Some(transmute(timer_ptr)); }
+        unsafe { RT_TIMER = Some(transmute(timer_ptr)); }
         SleepTimer {
             timer_ref: timer_ref,
         }
@@ -25,13 +25,13 @@ impl<'a> SleepTimer<'a> {
 
 impl<'a> Drop for SleepTimer<'a> {
     fn drop(&mut self) {
-        unsafe { rt_timer = None; }
+        unsafe { RT_TIMER = None; }
     }
 }
 
 
 pub fn usleep(us: u64) {
-    let timer = unsafe { &*rt_timer.expect("Attempted to sleep without initializing timer!") };
+    let timer = unsafe { &*RT_TIMER.expect("Attempted to sleep without initializing timer!") };
 
     let interval = timer.interrupt_interval_us();
     let initial = timer.us_val();
@@ -48,7 +48,7 @@ pub fn msleep(ms: u32) {
 }
 
 pub fn sleep(sec: u32) {
-    let timer = unsafe { &*rt_timer.expect("Attempted to sleep without initializing timer!") };
+    let timer = unsafe { &*RT_TIMER.expect("Attempted to sleep without initializing timer!") };
 
     let ms = sec * 1000;
     let interval = timer.interrupt_interval_ms();

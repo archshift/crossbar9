@@ -3,6 +3,8 @@ use core::ptr;
 const NDMA_BASE: u32 = 0x10002000u32;
 
 #[derive(Clone, Copy)]
+#[allow(non_camel_case_types)]
+#[allow(dead_code)]
 enum Reg {
     GLOBAL_CNT = 0x00,
     SRC_ADDR = 0x04,
@@ -122,7 +124,6 @@ pub fn mem_transfer(src: NdmaSrc, dst: NdmaDst) {
             }
             write_reg(Reg::SRC_ADDR, ptr as u32, channel);
         }
-        _ => unimplemented!()
     }
 
     match dst {
@@ -132,7 +133,6 @@ pub fn mem_transfer(src: NdmaSrc, dst: NdmaDst) {
             }
             write_reg(Reg::DST_ADDR, ptr as u32, channel);
         }
-        _ => unimplemented!()
     }
 
     let xfer_size = max_xfer_words(&src, &dst, None);

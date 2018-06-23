@@ -1,13 +1,14 @@
-use core::intrinsics;
+use core::ptr;
 
 pub const HID_BASE: u32 = 0x10146000u32;
 
 #[derive(Clone, Copy)]
+#[allow(non_camel_case_types)]
 enum Reg {
     PAD = 0x00,
 }
 
-pub mod Button {
+pub mod button {
     pub const A: u16      = 1 << 0;
     pub const B: u16      = 1 << 1;
     pub const SELECT: u16 = 1 << 2;
@@ -24,7 +25,7 @@ pub mod Button {
 
 #[inline(never)]
 fn read_reg<T: Copy>(reg: Reg) -> T {
-    unsafe { intrinsics::volatile_load((HID_BASE + reg as u32) as *const T) }
+    unsafe { ptr::read_volatile((HID_BASE + reg as u32) as *const T) }
 }
 
 #[derive(Clone, Copy)]

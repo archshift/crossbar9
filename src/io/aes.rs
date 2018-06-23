@@ -1,10 +1,11 @@
 use core::intrinsics;
 use core::mem;
-use core::slice;
 
 const AES_BASE: u32 = 0x10009000u32;
 
 #[derive(Clone, Copy)]
+#[allow(non_camel_case_types)]
+#[allow(dead_code)]
 enum Reg {
     CNT = 0x000,
     BLK_CNT = 0x006,
@@ -23,6 +24,7 @@ enum Reg {
 }
 
 #[derive(Clone, Copy)]
+#[allow(dead_code)]
 enum TwlKeyReg {
     NORMAL = 0x00,
     KEYX = 0x10,
@@ -149,35 +151,35 @@ impl<'a> AesContext<'a> {
         })
     }
 
-    pub fn with_keyslot(mut self, keyslot: u8) -> AesContext<'a> {
+    pub fn with_keyslot(self, keyslot: u8) -> AesContext<'a> {
         AesContext { keyslot: keyslot, ..self }
     }
 
-    pub fn with_keywriter(mut self, keywriter: fn(&AesContext, u8, &[u8], Option<&[u8]>)) -> AesContext<'a> {
+    pub fn with_keywriter(self, keywriter: fn(&AesContext, u8, &[u8], Option<&[u8]>)) -> AesContext<'a> {
         AesContext { keywriter: keywriter, ..self }
     }
 
-    pub fn with_normalkey(mut self, key: &'a [u8]) -> AesContext<'a> {
+    pub fn with_normalkey(self, key: &'a [u8]) -> AesContext<'a> {
         AesContext { key: Some(key), key_y: None, ..self }
     }
 
-    pub fn with_keypair(mut self, keyx: &'a [u8], keyy: &'a [u8]) -> AesContext<'a> {
+    pub fn with_keypair(self, keyx: &'a [u8], keyy: &'a [u8]) -> AesContext<'a> {
         AesContext { key: Some(keyx), key_y: Some(keyy), ..self }
     }
 
-    pub fn with_input_le(mut self, state: bool) -> AesContext<'a> {
+    pub fn with_input_le(self, state: bool) -> AesContext<'a> {
         AesContext { input_le: state, ..self }
     }
 
-    pub fn with_output_le(mut self, state: bool) -> AesContext<'a> {
+    pub fn with_output_le(self, state: bool) -> AesContext<'a> {
         AesContext { output_le: state, ..self }
     }
 
-    pub fn with_output_rev_words(mut self, state: bool) -> AesContext<'a> {
+    pub fn with_output_rev_words(self, state: bool) -> AesContext<'a> {
         AesContext { output_rev_words: state, ..self }
     }
 
-    pub fn force_dsi_keygen(mut self, force: bool) -> AesContext<'a> {
+    pub fn force_dsi_keygen(self, force: bool) -> AesContext<'a> {
         AesContext { force_dsi_keygen: force, ..self }
     }
 
@@ -300,13 +302,13 @@ pub mod keywriter {
         }
     }
 
-    pub fn twlkey(ctx: &AesContext, keyslot: u8, key: &[u8], key_y: Option<&[u8]>) {
+    pub fn twlkey(_ctx: &AesContext, keyslot: u8, key: &[u8], key_y: Option<&[u8]>) {
         assert!(keyslot < 4);
         let mut key_cnt = 0;
         bf!(key_cnt @ KeyCntReg::keyslot = keyslot);
         write_reg(Reg::KEY_CNT, key_cnt);
 
-        if let Some(y) = key_y {
+        if let Some(_y) = key_y {
             unimplemented!();
         } else {
             let mut buf = [0u8; 16];

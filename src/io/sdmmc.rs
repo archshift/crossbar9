@@ -1,8 +1,10 @@
-use core::ptr;
+use io::RegEnum;
 
 const SDMMC_BASE: u32 = 0x10006000;
 
 #[derive(Clone, Copy)]
+#[allow(non_camel_case_types)]
+#[allow(dead_code)]
 enum Reg {
     CMD = 0x00,
     PORTSEL = 0x02,
@@ -47,7 +49,13 @@ enum Reg {
     RESET_SDIO = 0x1E0
 }
 
-enum Status0 {
+impl RegEnum for Reg {
+    fn addr_of(&self) -> u32 {
+        SDMMC_BASE + (*self as u32)
+    }
+}
+
+enum _Status0 {
     CmdResponseEnd = (1 << 0),
     DataEnd     = (1 << 2),
     CardRemove  = (1 << 3),
@@ -59,7 +67,7 @@ enum Status0 {
     SigStateA   = (1 << 10)
 }
 
-enum Status1 {
+enum _Status1 {
     CmdIndexErr = (1 << 0),
     CrcFail     = (1 << 1),
     StopBitErr  = (1 << 2),
@@ -77,53 +85,44 @@ enum Status1 {
 const STAT0_ALL: u16 = 0xf031;
 const STAT1_ALL: u16 = 0x0837;
 
-#[inline(never)]
-fn read_reg<T: Copy>(reg: Reg) -> T {
-    unsafe { ptr::read_volatile((SDMMC_BASE + reg as u32) as *const T) }
+pub fn soft_reset() {
+    Reg::RESET.write16(Reg::RESET.read16() & 0xFFFE);
+	Reg::RESET.write16(Reg::RESET.read16() | 1);
 }
 
-fn write_reg<T: Copy>(reg: Reg, val: T) {
-    unsafe { ptr::write_volatile((SDMMC_BASE + reg as u32) as *mut T, val); }
-}
-
-fn soft_reset() {
-    write_reg::<u16>(Reg::RESET, read_reg::<u16>(Reg::RESET) & 0xFFFE);
-	write_reg::<u16>(Reg::RESET, read_reg::<u16>(Reg::RESET) | 1);
-}
-
-fn base_init(data32: bool) {
-    write_reg::<u16>(Reg::DATACTL32, read_reg::<u16>(Reg::DATACTL32) & 0xF7FF);
-	write_reg::<u16>(Reg::DATACTL32, read_reg::<u16>(Reg::DATACTL32) & 0xEFFF);
-    write_reg::<u16>(Reg::DATACTL32, read_reg::<u16>(Reg::DATACTL32) | 0x402);
+pub fn base_init(data32: bool) {
+    Reg::DATACTL32.write16(Reg::DATACTL32.read16() & 0xF7FF);
+	Reg::DATACTL32.write16(Reg::DATACTL32.read16() & 0xEFFF);
+    Reg::DATACTL32.write16(Reg::DATACTL32.read16() | 0x402);
     
-    let ctl: u16 = read_reg(Reg::DATACTL);
-	write_reg::<u16>(Reg::DATACTL, (ctl & 0xFFDD) | 2);
+    let ctl = Reg::DATACTL.read16();
+	Reg::DATACTL.write16((ctl & 0xFFDD) | 2);
     if data32 {
-        write_reg::<u16>(Reg::DATACTL32, read_reg::<u16>(Reg::DATACTL32) & 0xFFFF);
-        write_reg::<u16>(Reg::DATACTL, read_reg::<u16>(Reg::DATACTL) & 0xFFDF);
-	    write_reg::<u16>(Reg::BLKLEN32, 512);
+        Reg::DATACTL32.write16(Reg::DATACTL32.read16() & 0xFFFF);
+        Reg::DATACTL.write16(Reg::DATACTL.read16() & 0xFFDF);
+	    Reg::BLKLEN32.write16(512);
     } else {
-        write_reg::<u16>(Reg::DATACTL32, read_reg::<u16>(Reg::DATACTL32) & 0xFFFD);
-        write_reg::<u16>(Reg::DATACTL, read_reg::<u16>(Reg::DATACTL) & 0xFFDD);
-        write_reg::<u16>(Reg::BLKLEN32, 0);
+        Reg::DATACTL32.write16(Reg::DATACTL32.read16() & 0xFFFD);
+        Reg::DATACTL.write16(Reg::DATACTL.read16() & 0xFFDD);
+        Reg::BLKLEN32.write16(0);
     }
-	write_reg::<u16>(Reg::BLKCOUNT32, 1);
+	Reg::BLKCOUNT32.write16(1);
 	
     soft_reset();
 	
-    write_reg::<u16>(Reg::IRMASK0, STAT0_ALL);
-	write_reg::<u16>(Reg::IRMASK1, STAT1_ALL);
-	write_reg::<u16>(Reg::UNKNOWN0, read_reg::<u16>(Reg::UNKNOWN0) | 0xDB);
-	write_reg::<u16>(Reg::UNKNOWN1, read_reg::<u16>(Reg::UNKNOWN1) | 0xDB);
-	write_reg::<u16>(Reg::PORTSEL, read_reg::<u16>(Reg::PORTSEL) & 0xFFFC);
+    Reg::IRMASK0.write16(STAT0_ALL);
+	Reg::IRMASK1.write16(STAT1_ALL);
+	Reg::UNKNOWN0.write16(Reg::UNKNOWN0.read16() | 0xDB);
+	Reg::UNKNOWN1.write16(Reg::UNKNOWN1.read16() | 0xDB);
+	Reg::PORTSEL.write16(Reg::PORTSEL.read16() & 0xFFFC);
     if data32 {
-        write_reg::<u16>(Reg::CLKCTL, 0x20);
-        write_reg::<u16>(Reg::OPT, 0x40EE);
+        Reg::CLKCTL.write16(0x20);
+        Reg::OPT.write16(0x40EE);
     } else {
-        write_reg::<u16>(Reg::CLKCTL, 0x40); //Nintendo sets this to 0x20
-        write_reg::<u16>(Reg::OPT, 0x40EB); //Nintendo sets this to 0x40EE
+        Reg::CLKCTL.write16(0x40); //Nintendo sets this to 0x20
+        Reg::OPT.write16(0x40EB); //Nintendo sets this to 0x40EE
     }
-	write_reg::<u16>(Reg::PORTSEL, read_reg::<u16>(Reg::PORTSEL) & 0xFFFC);
-	write_reg::<u16>(Reg::BLKLEN, 512);
-	write_reg::<u16>(Reg::STOP, 0);
+	Reg::PORTSEL.write16(Reg::PORTSEL.read16() & 0xFFFC);
+	Reg::BLKLEN.write16(512);
+	Reg::STOP.write16(0);
 }

@@ -3,6 +3,7 @@ use core::ptr;
 pub const I2C_BASES: [u32; 3] = [0x10161000, 0x10144000, 0x10148000];
 
 #[derive(Clone, Copy)]
+#[allow(non_camel_case_types)]
 pub enum Device {
     MCU = 0x03,
 }
@@ -116,7 +117,7 @@ impl DevData {
 
 pub fn read_byte(dev: Device, reg: u8) -> Result<u8, ()> {
     let dev_data = DevData::new(dev);
-    for i in 0..8 {
+    for _ in 0..8 {
         if dev_data.select_target(reg, true).is_ok() {
             dev_data.wait_busy();
             dev_data.xfer_byte(1);
@@ -137,7 +138,7 @@ pub fn read_bytes(dev: Device, reg: u8, dest: &mut [u8]) -> Result<(), ()> {
     }
 
     let dev_data = DevData::new(dev);
-    for i in 0..8 {
+    for _ in 0..8 {
         if dev_data.select_target(reg, true).is_ok() {
             for n in 0..(dest.len() - 1) {
                 dev_data.wait_busy();
@@ -163,7 +164,7 @@ pub fn read_bytes(dev: Device, reg: u8, dest: &mut [u8]) -> Result<(), ()> {
 
 pub fn write_byte(dev: Device, reg: u8, data: u8) -> Result<(), ()> {
     let dev_data = DevData::new(dev);
-    for i in 0..8 {
+    for _ in 0..8 {
         if dev_data.select_target(reg, false).is_ok() {
             dev_data.wait_busy();
             dev_data.write_reg(Reg::DATA, data);

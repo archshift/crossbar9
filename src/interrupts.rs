@@ -1,8 +1,5 @@
 use io::irq;
 
-use core::intrinsics::ctlz;
-use core::iter;
-
 extern {
     static ldr_pc_pc_neg4: u32;
     fn wrap_handle_irq();
@@ -26,7 +23,7 @@ pub fn without_interrupts<T, F: FnOnce() -> T>(f: F) -> T {
 #[no_mangle]
 pub extern fn init_interrupts() {
     without_interrupts(|| {
-        static vector_mappings: [(u32, unsafe extern fn()); 6] = [
+        static VECTOR_MAPPINGS: [(u32, unsafe extern fn()); 6] = [
             (0x08000000, wrap_handle_irq),
             (0x08000008, wrap_handle_fiq),
             (0x08000010, wrap_handle_swi),
@@ -35,7 +32,7 @@ pub extern fn init_interrupts() {
             (0x08000028, wrap_handle_dta),
         ];
 
-        for &(addr, handler) in vector_mappings.iter() {
+        for &(addr, handler) in VECTOR_MAPPINGS.iter() {
             unsafe {
                 *(addr as *mut u32) = ldr_pc_pc_neg4;
                 *((addr + 4) as *mut u32) = handler as u32;
@@ -49,7 +46,7 @@ pub extern fn init_interrupts() {
 
 pub type HandlerFn = fn();
 
-static mut handler_list: [(u32, [Option<HandlerFn>; 4]); 30] = [
+static mut HANDLER_LIST: [(u32, [Option<HandlerFn>; 4]); 30] = [
     (irq::Interrupt::DMAC_1_0,      [None, None, None, None]),
     (irq::Interrupt::DMAC_1_1,      [None, None, None, None]),
     (irq::Interrupt::DMAC_1_2,      [None, None, None, None]),
@@ -82,6 +79,7 @@ static mut handler_list: [(u32, [Option<HandlerFn>; 4]); 30] = [
     (irq::Interrupt::DMAC_2_ABORT,  [None, None, None, None]),
 ];
 
+#[derive(Debug)]
 pub enum Error {
     InvalidInterrupt,
     HandlersFull,
@@ -90,15 +88,15 @@ pub enum Error {
 
 pub fn find_handler<'a>(int_type: u32, val: Option<HandlerFn>) -> Result<&'a mut Option<HandlerFn>, Error> {
     without_interrupts(|| {
-        let pos = match unsafe { handler_list.iter() }.position(|&x| x.0 == int_type) {
+        let pos = match unsafe { HANDLER_LIST.iter() }.position(|&x| x.0 == int_type) {
             Some(x) => x,
             None => return Err(Error::InvalidInterrupt)
         };
-        let found_pos = match unsafe { handler_list[pos].1.iter() }.position(|&x| x == val) {
+        let found_pos = match unsafe { HANDLER_LIST[pos].1.iter() }.position(|&x| x == val) {
             Some(x) => x,
             None => return Err(Error::NotFound)
         };
-        Ok(unsafe { &mut handler_list[pos].1[found_pos] })
+        Ok(unsafe { &mut HANDLER_LIST[pos].1[found_pos] })
     })
 }
 
@@ -116,7 +114,7 @@ pub fn unregister_handler(int_type: u32, handler: HandlerFn) -> Result<(), Error
 pub extern fn handle_irq() {
     let pending_interrupts = irq::get_pending() & irq::get_enabled();
 
-    let found = unsafe { handler_list.iter() }.find(|&x| pending_interrupts & x.0 != 0);
+    let found = unsafe { HANDLER_LIST.iter() }.find(|&x| pending_interrupts & x.0 != 0);
     let &(interrupt, handlers) = match found {
         Some(x) => x,
         None => {
@@ -134,7 +132,7 @@ pub extern fn handle_irq() {
 }
 
 #[no_mangle]
-pub extern fn handle_swi(swi_index: u32) {
+pub extern fn handle_swi(_swi_index: u32) {
     panic!("Software interrupts not yet handled!");
 }
 

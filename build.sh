@@ -2,12 +2,12 @@
 
 TARGET=thumbv5te-none-eabi
 
-FEATURE="$1"
+export C9_TEST_TYPE="$1"
 if [ "$1" = "" ]; then
-    FEATURE="hello_world"
+    export C9_TEST_TYPE="hello_world"
 fi
 
-echo "Compiling test \"$FEATURE\"..."
+echo "Compiling test \"$C9_TEST_TYPE\"..."
 
 RELMODE="$2"
 if [ "$2" = "debug" ]; then

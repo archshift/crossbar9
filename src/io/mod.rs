@@ -19,6 +19,34 @@ macro_rules! lease_ty {
     ($lifetime:tt, $which:ident) => (::core::cell::RefMut<$lifetime, $crate::io::arbiter::$which>);
 }
 
+pub trait RegEnum {
+    fn addr_of(&self) -> u32;
+    fn ptr<T: Copy>(&self) -> *mut T {
+        assert!((self.addr_of() as usize) & (::core::mem::align_of::<T>() - 1) == 0);
+        self.addr_of() as *mut T
+    }
+
+    fn read8(&self) -> u8 {
+        unsafe { self.ptr::<u8>().read_volatile() }
+    }
+    fn read16(&self) -> u16 {
+        unsafe { self.ptr::<u16>().read_volatile() }
+    }
+    fn read32(&self) -> u32 {
+        unsafe { self.ptr::<u32>().read_volatile() }
+    }
+
+    fn write8(&self, val: u8) {
+        unsafe { self.ptr::<u8>().write_volatile(val) };
+    }
+    fn write16(&self, val: u16) {
+        unsafe { self.ptr::<u16>().write_volatile(val) };
+    }
+    fn write32(&self, val: u32) {
+        unsafe { self.ptr::<u32>().write_volatile(val) };
+    }
+}
+
 pub mod aes;
 pub mod hid;
 pub mod i2c;

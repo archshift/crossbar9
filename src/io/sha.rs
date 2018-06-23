@@ -1,13 +1,10 @@
 use core::intrinsics;
-use core::mem;
-use core::u16;
-
-use interrupts::{self, HandlerFn};
-use io::irq::{self, Interrupt};
+use core::ptr;
 
 const SHA_BASE: u32 = 0x1000A000u32;
 
 #[derive(Clone, Copy)]
+#[allow(non_camel_case_types)]
 enum Reg {
     CNT = 0x00,
     BLK_CNT = 0x04,
@@ -36,11 +33,11 @@ bfdesc!(CntReg: u32, {
 
 #[inline(never)]
 fn read_reg<T: Copy>(reg: Reg) -> T {
-    unsafe { intrinsics::volatile_load((SHA_BASE + reg as u32) as *const T) }
+    unsafe { ptr::read_volatile((SHA_BASE + reg as u32) as *const T) }
 }
 
 fn write_reg<T: Copy>(reg: Reg, val: T) {
-    unsafe { intrinsics::volatile_store((SHA_BASE + reg as u32) as *mut T, val); }
+    unsafe { ptr::write_volatile((SHA_BASE + reg as u32) as *mut T, val); }
 }
 
 fn write_fifo<F: Fn()>(reg: Reg, fifo_size: usize, buf: &[u8], sync_fn: F) {
@@ -67,10 +64,6 @@ fn write_fifo<F: Fn()>(reg: Reg, fifo_size: usize, buf: &[u8], sync_fn: F) {
 
 fn sha_is_working() -> bool {
     bf!((read_reg(Reg::CNT)) @ CntReg::start) == 1
-}
-
-fn sha_has_finalized() -> bool {
-    bf!((read_reg(Reg::CNT)) @ CntReg::final_round) == 0
 }
 
 fn run_hasher(mode: HashMode, buf: &[u8]) {

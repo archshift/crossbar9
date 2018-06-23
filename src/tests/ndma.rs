@@ -1,5 +1,3 @@
-use core::mem;
-
 use gfx;
 use io::ndma;
 

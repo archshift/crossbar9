@@ -1,6 +1,5 @@
 use core::intrinsics;
 use core::iter;
-use core::mem;
 
 const RSA_BASE: u32 = 0x1000B000u32;
 
@@ -11,6 +10,8 @@ struct RegSlot {
 }
 
 #[derive(Clone, Copy)]
+#[allow(non_camel_case_types)]
+#[allow(dead_code)]
 enum Reg {
     CNT = 0x000,
     UNK = 0x0F0,

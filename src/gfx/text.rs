@@ -15,8 +15,8 @@ macro_rules! log {
     ($($tok:tt)*) => {{ print!($($tok)*); print!("\n"); }};
 }
 
-fn draw_letter(pos: (usize, usize), mut letter: u8) {
-    static font_bmp: Bitmap3 = Bitmap3 {
+fn draw_letter(pos: (usize, usize), letter: u8) {
+    static FONT_BMP: Bitmap3 = Bitmap3 {
         bytes: &FONT,
         rect: (128, 24),
         skip_pixels: 0
@@ -35,7 +35,7 @@ fn draw_letter(pos: (usize, usize), mut letter: u8) {
     let letter_x = (letter_size.0 + letter_padding.0) * letter_col;
     let letter_y = (letter_size.1 + letter_padding.1) * letter_row;
 
-    let letter_bmp = font_bmp.submap((letter_x, letter_y), letter_size);
+    let letter_bmp = FONT_BMP.submap((letter_x, letter_y), letter_size);
 
     blit(pos, &letter_bmp);
 }

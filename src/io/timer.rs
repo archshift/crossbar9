@@ -2,12 +2,12 @@ use core::intrinsics;
 use core::u16;
 
 use interrupts::{self, HandlerFn};
-use io::arbiter as io_arbiter;
 use io::irq::{self, Interrupt};
 
 const TIMER_BASE: u32 = 0x10003000u32;
 
 #[derive(Clone, Copy)]
+#[allow(non_camel_case_types)]
 enum Reg {
     VAL_0 = 0x00,
     VAL_1 = 0x04,
@@ -45,7 +45,7 @@ fn write_reg(reg: Reg, val: u16) {
 }
 
 fn ticks_to_units(num_ticks: u64, prescaler: Prescaler, units_per_second: u32) -> u64 {
-    let max_tps: u64 = (1 << 26);
+    let max_tps: u64 = 1 << 26;
     let scaled_tps = match prescaler {
         Prescaler::Div1 => max_tps,
         Prescaler::Div64 => max_tps >> 6,
@@ -55,15 +55,15 @@ fn ticks_to_units(num_ticks: u64, prescaler: Prescaler, units_per_second: u32) -
     (num_ticks * units_per_second as u64) / scaled_tps
 }
 
-static mut timer_overflows: [u64; 4] = [0; 4];
+static mut TIMER_OVERFLOWS: [u64; 4] = [0; 4];
 
-fn update_overflows_0() { unsafe { timer_overflows[0] += 1; } }
-fn update_overflows_1() { unsafe { timer_overflows[1] += 1; } }
-fn update_overflows_2() { unsafe { timer_overflows[2] += 1; } }
-fn update_overflows_3() { unsafe { timer_overflows[3] += 1; } }
+fn update_overflows_0() { unsafe { TIMER_OVERFLOWS[0] += 1; } }
+fn update_overflows_1() { unsafe { TIMER_OVERFLOWS[1] += 1; } }
+fn update_overflows_2() { unsafe { TIMER_OVERFLOWS[2] += 1; } }
+fn update_overflows_3() { unsafe { TIMER_OVERFLOWS[3] += 1; } }
 
 pub struct Timer<'a> {
-    lease: lease_ty!('a, TimerLease),
+    _lease: lease_ty!('a, TimerLease),
     index: usize,
     val_reg: Reg,
     cnt_reg: Reg,
@@ -87,13 +87,13 @@ impl<'a> Timer<'a> {
         };
 
         if let Some(callback) = callback {
-            interrupts::register_handler(int_type, callback);
+            interrupts::register_handler(int_type, callback).unwrap();
         }
-        interrupts::register_handler(int_type, overflow_fn);
+        interrupts::register_handler(int_type, overflow_fn).unwrap();
         irq::set_enabled(int_type);
 
         let timer = Timer {
-            lease: lease,
+            _lease: lease,
             index: index,
             val_reg: val_reg,
             cnt_reg: cnt_reg,
@@ -111,7 +111,7 @@ impl<'a> Timer<'a> {
     #[inline(always)]
     pub fn tick_val(&self) -> u64 {
         let overflows = interrupts::without_interrupts(|| {
-            unsafe { timer_overflows[self.index] }
+            unsafe { TIMER_OVERFLOWS[self.index] }
         });
         (overflows << 16) | (read_reg(self.val_reg) as u64)
     }
@@ -172,9 +172,9 @@ impl<'a> Timer<'a> {
 impl<'a> Drop for Timer<'a> {
     fn drop(&mut self) {
         irq::set_disabled(self.interrupt_type);
-        interrupts::unregister_handler(self.interrupt_type, self.overflow_fn);
+        interrupts::unregister_handler(self.interrupt_type, self.overflow_fn).unwrap();
         if let Some(callback) = self.callback {
-            interrupts::unregister_handler(self.interrupt_type, callback);
+            interrupts::unregister_handler(self.interrupt_type, callback).unwrap();
         }
     }
 }

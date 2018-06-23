@@ -13,15 +13,13 @@ fn top_screen_addr() -> u32 {
 
 unsafe fn draw_pixel(fb_addr: u32, pos: (usize, usize), r: u8, g: u8, b: u8) {
     let base_addr = fb_addr + (3 * (pos.1 * SCREEN_WIDTH + pos.0)) as u32;
-    unsafe {
-        core::intrinsics::volatile_store((base_addr + 0) as *mut u8, b);
-        core::intrinsics::volatile_store((base_addr + 1) as *mut u8, g);
-        core::intrinsics::volatile_store((base_addr + 2) as *mut u8, r);
-    }
+    core::intrinsics::volatile_store((base_addr + 0) as *mut u8, b);
+    core::intrinsics::volatile_store((base_addr + 1) as *mut u8, g);
+    core::intrinsics::volatile_store((base_addr + 2) as *mut u8, r);
 }
 
 unsafe fn blit_(fb_addr: u32, pos: (usize, usize), bmp: &Bitmap3) {
-    let mut width = bmp.rect.0;
+    let width = bmp.rect.0;
     let mut curr_pixel = 0;
     for (r, g, b) in bmp.bytes() {
         draw_pixel(fb_addr, (pos.0 + curr_pixel % width, pos.1 + curr_pixel / width), r, g, b);

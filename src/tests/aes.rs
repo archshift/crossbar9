@@ -130,7 +130,7 @@ fn test_normkey() {
     buf.copy_from_slice(ENCRYPTED_ECB);
     ctx = ctx.with_output_rev_words(true);
     ctx.crypt128(aes::Mode::ECB, aes::Direction::Decrypt, &mut buf[..], Some(IV));
-    ctx = ctx.with_output_rev_words(false);
+    ctx.with_output_rev_words(false);
     print_ifeq_res(buf.iter(), with_reverse_words_in_block(TEXT));
 }
 
@@ -154,7 +154,7 @@ fn test_rev_normkey() {
 
     ctx = ctx.with_input_le(true);
     ctx.crypt128(aes::Mode::CTR, aes::Direction::Decrypt, &mut buf[..], Some(&rev_ctr));
-    ctx = ctx.with_input_le(false);
+    ctx.with_input_le(false);
     print_ifeq_res(buf.iter(), TEXT.iter());
 }
 
@@ -182,13 +182,13 @@ fn test_rev_keypair() {
 
     ctx = ctx.with_input_le(true);
     ctx.crypt128(aes::Mode::CTR, aes::Direction::Decrypt, &mut buf[..], Some(&rev_ctr));
-    ctx = ctx.with_input_le(false);
+    ctx.with_input_le(false);
     print_ifeq_res(buf.iter(), TEXT.iter());
 }
 
 pub fn test_twl_keyslot() {
     let mut buf = [0u8;32];
-    let mut ctx = aes::AesContext::new().unwrap()
+    let ctx = aes::AesContext::new().unwrap()
         .with_normalkey(NORM_KEY)
         .with_keyslot(0x3)
         .with_keywriter(aes::keywriter::twlkey);

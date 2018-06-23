@@ -15,7 +15,7 @@ pub extern fn panic_fmt(_msg: core::fmt::Arguments, _file: &'static str, _line: 
     core::fmt::write(&mut ::gfx::LogWriter, format_args!(" @ {}, L{}\n", _file, _line)).unwrap();
 
     log!("Press SELECT to power off.");
-    while !::io::hid::buttons_pressed().0[::io::hid::Button::SELECT.trailing_zeros() as usize] {}
+    while !::io::hid::buttons_pressed().0[::io::hid::button::SELECT.trailing_zeros() as usize] {}
     ::power::power_off()
 }
 

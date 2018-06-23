@@ -1,6 +1,6 @@
-const KB: u32 = 1024;
-const MB: u32 = KB * KB;
-const GB: u32 = KB * MB;
+const KB: u64 = 1024;
+const MB: u64 = KB * KB;
+const GB: u64 = KB * MB;
 
 extern {
     fn add_mpu_regions(regions: *const u32);
@@ -13,11 +13,12 @@ extern {
     fn invalidate_clean_dcache();
 }
 
-fn make_mpu_region_desc(base: u32, size: u32) -> u32 {
+fn make_mpu_region_desc(base: u32, size: u64) -> u32 {
     if size.count_ones() > 1 {
         panic!("Improper size {:#X} for region {:08X}", size, base);
     }
-    assert!(size == 0 || size >= 4*KB);
+    assert!(size <= 4*GB && size >= 4*KB);
+    let size = size as u32;
     let size_pot = size.trailing_zeros();
     (base >> 12 << 12) | (size_pot-1) << 1 | 1
 }
