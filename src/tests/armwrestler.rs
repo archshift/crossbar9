@@ -42,7 +42,7 @@ pub extern fn aw_draw_result(string: *const u8, status: u32, extra_data: u32) {
     let mut skip_flags = false;
     if status & 0x80000000 != 0 {
         let txti = extra_data as usize;
-        gfx::log(&szLDRtype[5*txti .. 5*txti+4]);
+        gfx::log(unsafe { &szLDRtype[5*txti .. 5*txti+4] });
     } else if status & 0x40000000 != 0 {
         skip_flags = true;
     }

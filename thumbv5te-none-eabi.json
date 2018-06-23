@@ -23,8 +23,5 @@
             "-nostdlib",
             "-Tlayout.ld"
         ]
-    },
-    "post-link-args": {
-        "gcc": [ "-lgcc" ]
     }
 }
