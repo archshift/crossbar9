@@ -8,7 +8,7 @@ pub fn main() {
         aw_test1();
         aw_test2();
         aw_test3();
-        // aw_test4();
+        aw_test4();
         aw_test5();
     }
 }
@@ -18,7 +18,7 @@ extern {
     fn aw_test1();
     fn aw_test2();
     fn aw_test3();
-    // fn aw_test4();
+    fn aw_test4();
     fn aw_test5();
 
     static szLDRtype: [u8; 12*5];

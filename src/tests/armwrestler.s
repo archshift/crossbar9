@@ -1808,7 +1808,7 @@ aw_test4:
 	add 	r8,r8,#8
 
 	ldmfd sp!,{lr}
-	mov pc,lr
+	bx lr
 .endfunc
 .pool
 .align
