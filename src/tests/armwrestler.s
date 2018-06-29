@@ -16,6 +16,7 @@
 .func aw_test0
 aw_test0:
 	stmfd sp!,{lr}
+	mov r9,#0
 
 	ldr r0,=szALU1
 	mov r1,#56
