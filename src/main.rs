@@ -1,4 +1,4 @@
-#![feature(lang_items, core_intrinsics)]
+#![feature(panic_handler, core_intrinsics)]
 #![allow(unused_parens)]
 #![deny(warnings)]
 #![no_std]

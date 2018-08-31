@@ -6,7 +6,6 @@ build = "build.rs"
 
 [profile.release]
 lto = true
-debug = true
 panic = "abort"
 
 [profile.dev]
