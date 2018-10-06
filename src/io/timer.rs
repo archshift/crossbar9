@@ -28,11 +28,11 @@ pub enum Prescaler {
     Div1024 = 3,
 }
 
-bfdesc!(CntReg: u16, {
-    prescaler: 0 => 1,
-    count_up: 2 => 2,
-    irq_enable: 6 => 6,
-    started: 7 => 7
+bf!(CntReg[u16] {
+    prescaler: 0:1,
+    count_up: 2:2,
+    irq_enable: 6:6,
+    started: 7:7
 });
 
 #[inline(never)]
@@ -148,23 +148,29 @@ impl<'a> Timer<'a> {
 
     pub fn start(&self) {
         let mut cnt = read_reg(self.cnt_reg);
-        bf!(cnt @ CntReg::started = 1);
+        {
+            let cnt = CntReg::alias_mut(&mut cnt);
+            cnt.started.set(1);
+        }
         write_reg(self.cnt_reg, cnt);
     }
 
     pub fn stop(&self) {
         let mut cnt = read_reg(self.cnt_reg);
-        bf!(cnt @ CntReg::started = 0);
+        {
+            let cnt = CntReg::alias_mut(&mut cnt);
+            cnt.started.set(0);
+        }
         write_reg(self.cnt_reg, cnt);
     }
 
     pub fn reset(&self) {
-        let mut cnt = 0u16;
-        bf!(cnt @ CntReg::prescaler = self.prescaler as u16);
-        bf!(cnt @ CntReg::count_up = 0);
-        bf!(cnt @ CntReg::irq_enable = 1);
-        bf!(cnt @ CntReg::started = 0);
-        write_reg(self.cnt_reg, cnt);
+        let mut cnt = CntReg::new(0u16);
+        cnt.prescaler.set(self.prescaler as u16);
+        cnt.count_up.set(0);
+        cnt.irq_enable.set(1);
+        cnt.started.set(0);
+        write_reg(self.cnt_reg, cnt.val);
         write_reg(self.val_reg, self.start_val);
     }
 }

@@ -16,23 +16,23 @@ enum Reg {
     CNT = 0x1C
 }
 
-bfdesc!(RegGlobalCnt: u32, {
-    global_enable: 0 => 0,
-    cycle_sel: 16 => 19,
-    use_round_robin: 31 => 31
+bf!(RegGlobalCnt[u32] {
+    global_enable: 0:0,
+    cycle_sel: 16:19,
+    use_round_robin: 31:31
 });
 
-bfdesc!(RegCnt: u32, {
-    dst_update_method: 10 => 11,
-    dst_reload: 12 => 12,
-    src_update_method: 13 => 14,
-    src_reload: 15 => 15,
-    blk_xfer_size: 16 => 19,
-    startup_mode: 24 => 27,
-    mode_immediate: 28 => 28,
-    mode_repeating: 29 => 29,
-    irq_enabled: 30 => 30,
-    busy: 31 => 31
+bf!(RegCnt[u32] {
+    dst_update_method: 10:11,
+    dst_reload: 12:12,
+    src_update_method: 13:14,
+    src_reload: 15:15,
+    blk_xfer_size: 16:19,
+    startup_mode: 24:27,
+    mode_immediate: 28:28,
+    mode_repeating: 29:29,
+    irq_enabled: 30:30,
+    busy: 31:31
 });
 
 #[inline(never)]
@@ -104,19 +104,20 @@ pub fn mem_transfer(src: NdmaSrc, dst: NdmaDst) {
     // Ensure global settings
     let channel = 1;
 
-    let mut global_cnt = 0;
-    bf!(global_cnt @ RegGlobalCnt::global_enable = 1);
+    let mut global_cnt = RegGlobalCnt::new(0);
+    global_cnt.global_enable.set(1);
     write_reg(Reg::GLOBAL_CNT, global_cnt, 0);
 
-    write_reg(Reg::CNT, 0, channel);
-    while bf!((read_reg(Reg::CNT, channel)) @ RegCnt::busy) == 1 { }
+    let mut cnt = RegCnt::new(0);
+    write_reg(Reg::CNT, cnt, channel);
+    while { cnt = read_reg(Reg::CNT, channel); cnt.busy.get() == 1 } { }
 
-    let mut cnt = 0;
+    cnt.val = 0;
 
     match src {
         NdmaSrc::FillData(data) => {
             write_reg(Reg::FILL_DATA, data, channel);
-            bf!(cnt @ RegCnt::src_update_method = 3); // Fill
+            cnt.src_update_method.set(3); // Fill
         }
         NdmaSrc::LinearBuf(ptr, _) | NdmaSrc::FixedAddr(ptr) => {
             if (ptr as u32) & 0b11 != 0 {
@@ -138,11 +139,11 @@ pub fn mem_transfer(src: NdmaSrc, dst: NdmaDst) {
     let xfer_size = max_xfer_words(&src, &dst, None);
     write_reg(Reg::WRITE_CNT, xfer_size as u32, channel);
 
-    bf!(cnt @ RegCnt::src_update_method = src.src_type_index());
-    bf!(cnt @ RegCnt::dst_update_method = dst.dst_type_index());
-    bf!(cnt @ RegCnt::mode_immediate = 1);
-    bf!(cnt @ RegCnt::busy = 1); // Start
+    cnt.src_update_method.set(src.src_type_index());
+    cnt.dst_update_method.set(dst.dst_type_index());
+    cnt.mode_immediate.set(1);
+    cnt.busy.set(1); // Start
     write_reg(Reg::CNT, cnt, channel);
 
-    while bf!((read_reg(Reg::CNT, channel)) @ RegCnt::busy) == 1 { }
+    while { cnt = read_reg(Reg::CNT, channel); cnt.busy.get() == 1 } { }
 }

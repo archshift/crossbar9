@@ -8,14 +8,14 @@ pub enum Device {
     MCU = 0x03,
 }
 
-bfdesc!(RegCnt: u8, {
-    end: 0 => 0,
-    beginning: 1 => 1,
-    pause: 2 => 2,
-    ack: 4 => 4,
-    should_read: 5 => 5,
-    enable_irq: 6 => 6,
-    running: 7 => 7
+bf!(RegCnt[u8] {
+    end: 0:0,
+    beginning: 1:1,
+    pause: 2:2,
+    ack: 4:4,
+    should_read: 5:5,
+    enable_irq: 6:6,
+    running: 7:7
 });
 
 #[derive(Clone, Copy)]
@@ -67,7 +67,8 @@ impl DevData {
     fn wait_busy(&self) {
         let is_busy = || {
             let cnt = self.read_reg(Reg::CNT);
-            bf!(cnt @ RegCnt::running) == 1
+            let cnt = RegCnt::new(cnt);
+            cnt.running.get() == 1
         };
         while is_busy() { }
     }
@@ -75,7 +76,8 @@ impl DevData {
     fn op_result(&self) -> Result<(), ()> {
         self.wait_busy();
         let cnt = self.read_reg(Reg::CNT);
-        if bf!(cnt @ RegCnt::ack) == 1 {
+        let cnt = RegCnt::new(cnt);
+        if cnt.ack.get() == 1 {
             Ok(())
         } else {
             Err(())

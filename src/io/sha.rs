@@ -20,15 +20,15 @@ pub enum HashMode {
     SHA1_ = 3,
 }
 
-bfdesc!(CntReg: u32, {
-    start: 0 => 0,
-    final_round: 1 => 1,
-    enable_irq0: 2 => 2,
-    big_endian: 3 => 3,
-    hash_mode: 4 => 5,
-    clear_fifo: 8 => 8,
-    enable_fifo: 9 => 9,
-    enable_irq1: 10 => 10
+bf!(CntReg[u32] {
+    start: 0:0,
+    final_round: 1:1,
+    enable_irq0: 2:2,
+    big_endian: 3:3,
+    hash_mode: 4:5,
+    clear_fifo: 8:8,
+    enable_fifo: 9:9,
+    enable_irq1: 10:10
 });
 
 #[inline(never)]
@@ -63,16 +63,16 @@ fn write_fifo<F: Fn()>(reg: Reg, fifo_size: usize, buf: &[u8], sync_fn: F) {
 }
 
 fn sha_is_working() -> bool {
-    bf!((read_reg(Reg::CNT)) @ CntReg::start) == 1
+    read_reg::<CntReg::Bf>(Reg::CNT).start.get() == 1
 }
 
 fn run_hasher(mode: HashMode, buf: &[u8]) {
     while sha_is_working() {}
 
     // Reset SHA device
-    let mut cnt_reg = 0u32;
-    bf!(cnt_reg @ CntReg::start = 1);
-    bf!(cnt_reg @ CntReg::clear_fifo = 1);
+    let mut cnt_reg = CntReg::new(0u32);
+    cnt_reg.start.set(1);
+    cnt_reg.clear_fifo.set(1);
     write_reg(Reg::CNT, cnt_reg);
     write_reg(Reg::CNT, 0u32);
 
@@ -80,10 +80,10 @@ fn run_hasher(mode: HashMode, buf: &[u8]) {
     write_reg(Reg::BLK_CNT, buf.len() as u32);
 
     // Enable SHA device with proper parameters
-    cnt_reg = 0u32;
-    bf!(cnt_reg @ CntReg::start = 1);
-    bf!(cnt_reg @ CntReg::big_endian = 1);
-    bf!(cnt_reg @ CntReg::hash_mode = mode as u32);
+    cnt_reg.val = 0u32;
+    cnt_reg.start.set(1);
+    cnt_reg.big_endian.set(1);
+    cnt_reg.hash_mode.set(mode as u32);
     write_reg(Reg::CNT, cnt_reg);
 
     write_fifo(Reg::FIFO, 0x40, buf, || {
@@ -92,8 +92,8 @@ fn run_hasher(mode: HashMode, buf: &[u8]) {
 
     // Halt SHA device
     cnt_reg = read_reg(Reg::CNT);
-    bf!(cnt_reg @ CntReg::start = 0);
-    bf!(cnt_reg @ CntReg::final_round = 1);
+    cnt_reg.start.set(0);
+    cnt_reg.final_round.set(1);
     write_reg(Reg::CNT, cnt_reg);
 
     while sha_is_working() {}

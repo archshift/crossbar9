@@ -31,30 +31,30 @@ enum TwlKeyReg {
     KEYY = 0x20
 }
 
-bfdesc!(CntReg: u32, {
-    fifo_in_count: 0 => 4,
-    fifo_out_count: 5 => 9,
-    flush_fifo_in: 10 => 10,
-    flush_fifo_out: 11 => 11,
-    fifo_in_dma_size: 12 => 13,
-    fifo_out_dma_size: 14 => 15,
-    mac_size: 16 => 18,
-    mac_source_reg: 20 => 20,
-    mac_verified: 21 => 21,
-    out_big_endian: 22 => 22,
-    in_big_endian: 23 => 23,
-    out_normal_order: 24 => 24,
-    in_normal_order: 25 => 25,
-    update_keyslot: 26 => 26,
-    mode: 27 => 29,
-    enable_irq: 30 => 30,
-    busy: 31 => 31
+bf!(CntReg[u32] {
+    fifo_in_count: 0:4,
+    fifo_out_count: 5:9,
+    flush_fifo_in: 10:10,
+    flush_fifo_out: 11:11,
+    fifo_in_dma_size: 12:13,
+    fifo_out_dma_size: 14:15,
+    mac_size: 16:18,
+    mac_source_reg: 20:20,
+    mac_verified: 21:21,
+    out_big_endian: 22:22,
+    in_big_endian: 23:23,
+    out_normal_order: 24:24,
+    in_normal_order: 25:25,
+    update_keyslot: 26:26,
+    mode: 27:29,
+    enable_irq: 30:30,
+    busy: 31:31
 });
 
-bfdesc!(KeyCntReg: u8, {
-    keyslot: 0 => 5,
-    force_dsi_keygen: 6 => 6,
-    enable_fifo_flush: 7 => 7
+bf!(KeyCntReg[u8] {
+    keyslot: 0:5,
+    force_dsi_keygen: 6:6,
+    enable_fifo_flush: 7:7
 });
 
 #[inline(never)]
@@ -184,13 +184,13 @@ impl<'a> AesContext<'a> {
     }
 
     pub fn crypt128(&self, mode: Mode, direction: Direction, msg: &mut [u8], iv_ctr: Option<&[u8]>) {
-        let mut cnt = 0;
-        bf!(cnt @ CntReg::flush_fifo_in = 1);
-        bf!(cnt @ CntReg::flush_fifo_out = 1);
-        bf!(cnt @ CntReg::out_big_endian = !self.output_le as u32);
-        bf!(cnt @ CntReg::out_normal_order = !self.output_rev_words as u32);
-        bf!(cnt @ CntReg::in_big_endian = !self.input_le as u32);
-        bf!(cnt @ CntReg::in_normal_order = 1);
+        let mut cnt = CntReg::new(0);
+        cnt.flush_fifo_in.set(1);
+        cnt.flush_fifo_out.set(1);
+        cnt.out_big_endian.set(!self.output_le as u32);
+        cnt.out_normal_order.set(!self.output_rev_words as u32);
+        cnt.in_big_endian.set(!self.input_le as u32);
+        cnt.in_normal_order.set(1);
         write_reg(Reg::CNT, cnt);
 
         if let Some(key) = self.key {
@@ -225,8 +225,8 @@ impl<'a> AesContext<'a> {
         { // Select keyslot
             write_reg(Reg::KEY_SEL, self.keyslot);
 
-            let mut cnt = read_reg::<u32>(Reg::CNT);
-            bf!(cnt @ CntReg::update_keyslot = 1);
+            let mut cnt = read_reg::<CntReg::Bf>(Reg::CNT);
+            cnt.update_keyslot.set(1);
             write_reg(Reg::CNT, cnt);
         }
 
@@ -239,20 +239,20 @@ impl<'a> AesContext<'a> {
                 Direction::Encrypt => mode_base + 1,
             };
 
-            let mut cnt = read_reg::<u32>(Reg::CNT);
-            bf!(cnt @ CntReg::mode = mode_num);
-            bf!(cnt @ CntReg::busy = 1);
+            let mut cnt = read_reg::<CntReg::Bf>(Reg::CNT);
+            cnt.mode.set(mode_num);
+            cnt.busy.set(1);
             write_reg(Reg::CNT, cnt);
         }
 
         { // Perform crypto
             let fifo_in_full = || {
-                let cnt: u32 = read_reg(Reg::CNT);
-                bf!(cnt @ CntReg::fifo_in_count) == 16
+                let cnt: CntReg::Bf = read_reg(Reg::CNT);
+                cnt.fifo_in_count.get() == 16
             };
             let fifo_out_empty = || {
-                let cnt: u32 = read_reg(Reg::CNT);
-                bf!(cnt @ CntReg::fifo_out_count) == 0
+                let cnt: CntReg::Bf = read_reg(Reg::CNT);
+                cnt.fifo_out_count.get() == 0
             };
 
             let mut pos = 0;
@@ -280,10 +280,10 @@ impl<'a> AesContext<'a> {
 pub mod keywriter {
     use super::*;
     pub fn anykey(ctx: &AesContext, keyslot: u8, key: &[u8], key_y: Option<&[u8]>) {
-        let mut key_cnt = 0;
-        bf!(key_cnt @ KeyCntReg::keyslot = keyslot);
-        bf!(key_cnt @ KeyCntReg::enable_fifo_flush = 1);
-        bf!(key_cnt @ KeyCntReg::force_dsi_keygen = ctx.force_dsi_keygen as u8);
+        let mut key_cnt = KeyCntReg::new(0);
+        key_cnt.keyslot.set(keyslot);
+        key_cnt.enable_fifo_flush.set(1);
+        key_cnt.force_dsi_keygen.set(ctx.force_dsi_keygen as u8);
         write_reg(Reg::KEY_CNT, key_cnt);
 
         let key_reg = if key_y.is_some() { Reg::KEYX_FIFO }
@@ -304,8 +304,8 @@ pub mod keywriter {
 
     pub fn twlkey(_ctx: &AesContext, keyslot: u8, key: &[u8], key_y: Option<&[u8]>) {
         assert!(keyslot < 4);
-        let mut key_cnt = 0;
-        bf!(key_cnt @ KeyCntReg::keyslot = keyslot);
+        let mut key_cnt = KeyCntReg::new(0);
+        key_cnt.keyslot.set(keyslot);
         write_reg(Reg::KEY_CNT, key_cnt);
 
         if let Some(_y) = key_y {

@@ -5,11 +5,8 @@ pub fn panic_handler(info: &core::panic::PanicInfo) -> ! {
     ::gfx::clear_screen(0xFF, 0xFF, 0xFF);
     ::gfx::reset_log_cursor();
     
-    let msg = info.payload().downcast_ref::<&str>().unwrap();
-    let loc = info.location().unwrap();
-
     log!("PANIC PANIC PANIC PANIC PANIC");
-    log!("{} @ {}, L{}:{}", msg, loc.file(), loc.line(), loc.column());
+    log!("{}", info);
 
     log!("Press SELECT to power off.");
     while !::io::hid::buttons_pressed().0[::io::hid::button::SELECT.trailing_zeros() as usize] {}
@@ -25,4 +22,26 @@ pub extern fn abort() -> ! {
     loop {
         unsafe { ::interrupts::wait_for_interrupt() };
     }
+}
+
+#[no_mangle]
+pub extern fn __clzsi2(mut val: i32) -> i32 {
+    let mut i = 32;
+    let mut j = 16;
+    let mut temp;
+
+    while j != 0 {
+        temp = val >> j;
+        if temp != 0 {
+            if j == 1 {
+                return i - 2;
+            } else {
+                i -= j;
+                val = temp;
+            }
+        }
+        j >>= 1;
+    }
+
+    i - val
 }

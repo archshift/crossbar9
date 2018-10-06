@@ -24,11 +24,11 @@ enum Reg {
     TXT = 0x800,
 }
 
-bfdesc!(CntReg: u32, {
-    busy: 0 => 0,
-    keyslot: 4 => 5,
-    little_endian: 8 => 8,
-    normal_word_order: 9 => 9
+bf!(CntReg[u32] {
+    busy: 0:0,
+    keyslot: 4:5,
+    little_endian: 8:8,
+    normal_word_order: 9:9
 });
 
 #[inline(never)]
@@ -39,14 +39,6 @@ fn read_reg<T: Copy>(reg: Reg) -> T {
 #[inline(never)]
 fn write_reg<T: Copy>(reg: Reg, val: T) {
     unsafe { intrinsics::volatile_store((RSA_BASE + reg as u32) as *mut T, val); }
-}
-
-pub fn tweak_buffer(buf: &mut [u8], little_endian: bool, normal_word_order: bool) {
-    match (little_endian, normal_word_order) {
-        (true, true) => {},
-        (false, false) => buf.reverse(),
-        _ => unimplemented!()
-    }
 }
 
 pub fn crypt_2048_opt(key: &[u8], modulus: &[u8], msg: &[u8], little_endian: bool, normal_word_order: bool) -> [u8; 0x100] {
@@ -63,17 +55,16 @@ pub fn crypt_2048_opt(key: &[u8], modulus: &[u8], msg: &[u8], little_endian: boo
     }
 
     { // Update CNT
-        let mut cnt = 0;
-        bf!(cnt @ CntReg::keyslot = 3);
-        bf!(cnt @ CntReg::little_endian = little_endian as u32);
-        bf!(cnt @ CntReg::normal_word_order = normal_word_order as u32);
+        let mut cnt = CntReg::new(0);
+        cnt.keyslot.set(3);
+        cnt.little_endian.set(little_endian as u32);
+        cnt.normal_word_order.set(normal_word_order as u32);
         write_reg(Reg::CNT, cnt);
     }
 
     { // Copy exponent into FIFO one u32 at a time
-        let zero = 0u8;
         let remainder = 0x100 - key.len();
-        let mut k_it = iter::repeat(&zero).take(remainder).chain(key.iter());
+        let mut k_it = iter::repeat(&0u8).take(remainder).chain(key.iter());
 
         while let (Some(b0), Some(b1), Some(b2), Some(b3))
                 = (k_it.next(), k_it.next(), k_it.next(), k_it.next()) {
@@ -85,7 +76,6 @@ pub fn crypt_2048_opt(key: &[u8], modulus: &[u8], msg: &[u8], little_endian: boo
     { // Modulus
         let mut mod_buf = [0u8; 0x100];
         mod_buf[..].copy_from_slice(modulus);
-        tweak_buffer(&mut mod_buf, little_endian, normal_word_order);
         write_reg(Reg::MOD, mod_buf);
     }
 
@@ -98,17 +88,16 @@ pub fn crypt_2048_opt(key: &[u8], modulus: &[u8], msg: &[u8], little_endian: boo
     { // Write message/signature
         let mut msg_buf = [0u8; 0x100];
         msg_buf[0x100 - msg.len()..0x100].copy_from_slice(msg);
-        tweak_buffer(&mut msg_buf, little_endian, normal_word_order);
         write_reg(Reg::TXT, msg_buf);
     }
 
     { // Start processing
-        let mut cnt = read_reg(Reg::CNT);
-        bf!(cnt @ CntReg::busy = 1);
+        let mut cnt: CntReg::Bf = read_reg(Reg::CNT);
+        cnt.busy.set(1);
         write_reg(Reg::CNT, cnt);
     }
 
-    while bf!((read_reg(Reg::CNT)) @ CntReg::busy) == 1 { }
+    while read_reg::<CntReg::Bf>(Reg::CNT).busy.get() == 1 { }
 
     read_reg(Reg::TXT)
 }
