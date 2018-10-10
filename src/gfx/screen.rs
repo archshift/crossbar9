@@ -11,7 +11,7 @@ fn top_screen_addr() -> u32 {
 
 unsafe fn draw_pixel(fb_addr: u32, pos: (usize, usize), [r, g, b]: [u8;3]) {
     let (x, y) = pos;
-    let (x, y) = (SCREEN_HEIGHT - y, x);
+    let (x, y) = (SCREEN_HEIGHT - y - 1, x);
     let base_addr = fb_addr + (3 * (y * SCREEN_HEIGHT + x)) as u32;
     (base_addr as *mut [u8;3]).write_volatile([b, g, r]);
 }
