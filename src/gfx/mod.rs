@@ -6,64 +6,64 @@ pub use self::screen::*;
 pub use self::text::*;
 
 pub struct RgbIter<'a> {
-    index: usize,
     slice: &'a [u8],
-    row_size: usize,
-    rect_width: usize,
+    x: usize,
+    y: usize,
+    w: usize,
+    stride: usize,
 }
 
 impl<'a> Iterator for RgbIter<'a> {
-    type Item = (u8, u8, u8);
+    type Item = ((usize, usize), [u8;3]);
 
     fn next(&mut self) -> Option<Self::Item> {
-        let mut index = self.index;
-        while index + 3 <= self.slice.len() {
-            self.index += 3;
-            if index % self.row_size < self.rect_width {
-                return Some((self.slice[index],
-                             self.slice[index+1],
-                             self.slice[index+2]))
-            }
-            index += 3;
+        let xy = (self.x, self.y);
+        let pos = self.y*self.stride + self.x*3;
+
+        if pos >= self.slice.len() {
+            return None
         }
-        None
+
+        self.x += 1;
+        if self.x == self.w {
+            self.x = 0;
+            self.y += 1;
+        }
+
+        Some((xy, [self.slice[pos], self.slice[pos+1], self.slice[pos+2]]))
     }
 }
 
 pub struct Bitmap3<'a> {
     bytes: &'a [u8],
     rect: (usize, usize),
-    skip_pixels: usize
+    stride: usize
 }
 
 impl<'a> Bitmap3<'a> {
     pub fn submap(&self, pos: (usize, usize), rect: (usize, usize)) -> Bitmap3 {
         let ((x, y), (w, h)) = (pos, rect);
-
-        let parent_row_size = self.rect.0 + self.skip_pixels;
         // first byte: rows*row_size + columns
-        let first_byte = 3 * (y * parent_row_size + x);
+        let first_byte = y * self.stride + 3*x;
         // last byte: first_byte + extra_rows*row_size + extra_columns
-        let last_byte = first_byte + 3 * ((h - 1) * parent_row_size + w);
+        let last_byte = first_byte + (h - 1) * self.stride + 3*w;
 
         assert!((last_byte - first_byte) % 3 == 0);
 
         Bitmap3 {
             bytes: &self.bytes[first_byte..last_byte],
             rect: rect,
-            skip_pixels: parent_row_size - rect.0
+            stride: self.stride
         }
     }
 
     pub fn bytes(&self) -> RgbIter {
-        let row_size = 3 * (self.rect.0 + self.skip_pixels);
-        let rect_width = 3 * self.rect.0;
-
         RgbIter {
-            index: 0,
             slice: self.bytes,
-            row_size: row_size,
-            rect_width: rect_width,
+            x: 0,
+            y: 0,
+            w: self.rect.0,
+            stride: self.stride,
         }
     }
 }

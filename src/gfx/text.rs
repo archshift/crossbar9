@@ -19,7 +19,7 @@ fn draw_letter(pos: (usize, usize), letter: u8) {
     static FONT_BMP: Bitmap3 = Bitmap3 {
         bytes: &FONT,
         rect: (128, 24),
-        skip_pixels: 0
+        stride: 128*3
     };
 
     if letter >= 128 {
