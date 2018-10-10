@@ -1,7 +1,7 @@
 use gfx::Bitmap3;
 
-pub static SCREEN_WIDTH: usize = 240;
-pub static SCREEN_HEIGHT: usize = 400;
+pub static SCREEN_WIDTH: usize = 400;
+pub static SCREEN_HEIGHT: usize = 240;
 fn top_screen_addr() -> u32 {
     extern {
         static TOP_FRAMEBUF_START: u32;
@@ -10,7 +10,9 @@ fn top_screen_addr() -> u32 {
 }
 
 unsafe fn draw_pixel(fb_addr: u32, pos: (usize, usize), [r, g, b]: [u8;3]) {
-    let base_addr = fb_addr + (3 * (pos.1 * SCREEN_WIDTH + pos.0)) as u32;
+    let (x, y) = pos;
+    let (x, y) = (SCREEN_HEIGHT - y, x);
+    let base_addr = fb_addr + (3 * (y * SCREEN_HEIGHT + x)) as u32;
     (base_addr as *mut [u8;3]).write_volatile([b, g, r]);
 }
 
