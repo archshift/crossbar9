@@ -10,12 +10,15 @@ panic = "abort"
 
 [profile.dev]
 panic = "abort"
+opt-level = 2
+overflow-checks = false 
 
 [dependencies]
 rlibc = "1.0"
+xmas-elf = "0.6"
 
 [dependencies.bitutils]
-git = "https://github.com/archshift/bitutils-rs"
+version = "2.0"
 default-features = false
 
 [build-dependencies]

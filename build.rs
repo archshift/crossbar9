@@ -11,15 +11,15 @@ fn gcc_config() -> cc::Build {
 }
 
 fn main() {
-    println!("cargo:rerun-if-env-changed=C9_TEST_TYPE");
+    println!("cargo:rerun-if-env-changed=C9_PROG_TYPE");
 
-    // Make sure the requested test actually exists
-    let test = env!("C9_TEST_TYPE");
-    let modfile = include_str!("src/tests/mod.rs");
-    let start = modfile.find("define_tests!(").unwrap();
+    // Make sure the requested program actually exists
+    let prog = env!("C9_PROG_TYPE");
+    let modfile = include_str!("src/programs/mod.rs");
+    let start = modfile.find("define_programs!(").unwrap();
     let end = modfile[start..].find(");").unwrap() + start;
-    modfile[start..end].find(&format!("\"{}\"", test))
-        .expect(&format!("Could not find test `{}`!", test));
+    modfile[start..end].find(&format!("\"{}\"", prog))
+        .expect(&format!("Could not find program `{}`!", prog));
     
     println!("cargo:rerun-if-changed=src/start.s");
     println!("cargo:rerun-if-changed=src/interrupts.s");
@@ -36,7 +36,19 @@ fn main() {
 
     gcc_config()
         .flag("-w")
-        .file("src/tests/armwrestler.s")
-        .file("src/tests/cache_benchers.s")
+        .file("src/programs/armwrestler.s")
+        .file("src/programs/cache_benchers.s")
         .compile("libtestasm.a");
+
+    gcc_config()
+        .flag("-w")
+        .flag("-fno-strict-aliasing")
+        .include("Decrypt9WIP/source/fatfs")
+        .include("Decrypt9WIP/source")
+        .file("Decrypt9WIP/source/fatfs/ff.c")
+        .file("Decrypt9WIP/source/fatfs/delay.s")
+        .file("Decrypt9WIP/source/fatfs/sdmmc.c")
+        .file("Decrypt9WIP/source/fatfs/diskio.c")
+        .file("Decrypt9WIP/source/fs.c")
+        .compile("libd9fs.a");
 }

@@ -126,3 +126,65 @@ pub fn base_init(data32: bool) {
 	Reg::BLKLEN.write16(512);
 	Reg::STOP.write16(0);
 }
+
+
+// #[repr(C)]
+// struct mmcdevice {
+//     rData: *mut u8,
+//     tData: *const u8,
+//     size: u32,
+//     error: u32,
+//     stat0: u16,
+//     stat1: u16,
+//     ret: [u32;4],
+//     initarg: u32,
+//     isSDHC: u32,
+//     clk: u32,
+//     SDOPT: u32,
+//     devicenumber: u32,
+//     total_size: u32, //size in sectors of the device
+//     res: u32,
+// }
+
+// extern {
+//     static mut handelNAND: mmcdevice;
+//     static mut handelSD: mmcdevice;
+
+//     fn sdmmc_send_command(ctx: *mut mmcdevice, cmd: u32, args: u32);
+// }
+
+// fn sd_enable() {
+//     Reg::PORTSEL.write16(Reg::PORTSEL.read16() & !0b11);
+// 	setckl(ctx->clk);
+// 	if unsafe { handelSD.SDOPT == 0 } {
+//         Reg::OPT.write16(Reg::OPT.read16() | 0x8000);
+// 	} else {
+//         Reg::OPT.write16(Reg::OPT.read16() & !0x8000);
+// 	}
+// }
+
+// fn sd_cmd(cmd_index: u16, resp: bool, read: bool, write: bool, arg: u32) {
+//     unsafe {
+//         let fullcmd = (cmd_index as u32) | ((resp as u32) << 16) | ((read as u32) << 17) | ((write as u32) << 18);
+//         sdmmc_send_command(&handelSD, fullcmd, arg);
+//     }
+// }
+
+// fn sdmmc_sdcard_readsectors(sector_no: u32, numsectors: u32, out: *mut u8) -> i32 {
+//     let data32 = true;
+// 	if handelSD.isSDHC == 0 {
+//         sector_no *= 512;
+//     }
+
+// 	sd_enable();
+// 	Reg::STOP.write16(0x100);
+//     if data32 {
+//         Reg::BLKCOUNT32.write16(numsectors);
+//         Reg::BLKLEN32.write16(0x200);
+//     }
+// 	Reg::BLKCOUNT.write16(numsectors);
+// 	handelSD.rData = out;
+// 	handelSD.size = numsectors * 512;
+//     sd_cmd(0x3C12, true, true, false, sector_no);
+// 	return geterror(&handelSD);
+// }

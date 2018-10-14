@@ -131,9 +131,31 @@ pub extern fn handle_irq() {
     }
 }
 
+pub type SwiHandlerFn = fn(u32);
+static mut SWI_HANDLER: Option<SwiHandlerFn> = None;
+
+pub fn register_swi_handler(handler: SwiHandlerFn) -> Result<(), &'static str> {
+    unsafe { 
+        if SWI_HANDLER.is_none() {
+            SWI_HANDLER = Some(handler);
+            Ok(())
+        } else {
+            Err("Attempted to override existing SWI handler")
+        }
+    }
+}
+
+pub fn unregister_swi_handler() {
+    unsafe { SWI_HANDLER = None };
+}
+
 #[no_mangle]
-pub extern fn handle_swi(_swi_index: u32) {
-    panic!("Software interrupts not yet handled!");
+pub extern fn handle_swi(swi_index: u32) {
+    if let Some(h) = unsafe { SWI_HANDLER } {
+        h(swi_index);
+    } else {
+        panic!("Handling software interrupt {:02X} failed!", swi_index);
+    }
 }
 
 #[no_mangle]

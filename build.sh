@@ -2,24 +2,25 @@
 
 TARGET=thumbv5te-none-eabi
 
-export C9_TEST_TYPE="$1"
+export C9_PROG_TYPE="$1"
 if [ "$1" = "" ]; then
-    export C9_TEST_TYPE="hello_world"
+    export C9_PROG_TYPE="os"
 fi
 
-echo "Compiling test \"$C9_TEST_TYPE\"..."
+echo "Compiling program \"$C9_PROG_TYPE\"..."
 
 RELMODE="$2"
-if [ "$2" = "debug" ]; then
-    RELMODE_FLAG=""
-else
+if [ "$2" = "release" ]; then
     RELMODE="release"
     RELMODE_FLAG="--release"
+else
+    RELMODE="debug"
+    RELMODE_FLAG=""
 fi
 
-export CC=arm-none-eabi-gcc
+export CROSS_COMPILE=arm-none-eabi-
 export RUST_TARGET_PATH="$(pwd)"
-rustup run nightly xargo build --features "$FEATURE" $RELMODE_FLAG || exit -1
+rustup run nightly xargo build $RELMODE_FLAG || exit -1
 
 TARGET_DIR="./target/${TARGET}/${RELMODE}"
 TARGET_ELF="${TARGET_DIR}/crossbar9"

@@ -1,19 +1,19 @@
-macro_rules! define_tests {
-    ( $($feature:expr => $name:ident),* ) => (
+macro_rules! define_programs {
+    ( $($feature:expr => $name:ident),* $(,)* ) => (
         $(
             pub mod $name;
         )*
         pub fn main() {
             $(
-                if (env!("C9_TEST_TYPE") == $feature) {
-                    ::tests::$name::main()
+                if (env!("C9_PROG_TYPE") == $feature) {
+                    ::programs::$name::main()
                 }
             )*
         }
     )
 }
 
-define_tests!(
+define_programs!(
     "aes" => aes,
     "caches" => caches,
     "hello_world" => hello_world,
@@ -21,5 +21,7 @@ define_tests!(
     "rsa" => rsa,
     "sleep" => sleep_timer,
     "sha" => sha_hasher,
-    "armwrestler" => armwrestler
+    "armwrestler" => armwrestler,
+
+    "os" => os
 );

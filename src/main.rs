@@ -9,24 +9,28 @@ extern crate bitutils;
 extern crate rlibc;
 
 #[macro_use]
-mod gfx;
+pub mod gfx;
 #[macro_use]
 pub mod io;
 
-mod caches;
 mod ffistr;
 
+pub mod caches;
 pub mod interrupts;
 pub mod intrinsics;
+pub mod fat;
+pub mod mem;
 pub mod power;
+pub mod programs;
 pub mod realtime;
-pub mod tests;
+
 
 #[no_mangle]
 pub extern fn main() {
-    tests::main();
-
     log!("Press SELECT to power off.");
     while !io::hid::buttons_pressed().0[io::hid::button::SELECT.trailing_zeros() as usize] {}
-    power::power_off()
+    power::power_off();
 }
+
+#[global_allocator]
+static ALLOCATOR: mem::Allocator = mem::Allocator::new();

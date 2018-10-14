@@ -1,3 +1,6 @@
 [submodule "firmtool"]
 	path = firmtool
 	url = https://github.com/TuxSH/firmtool
+[submodule "Decrypt9WIP"]
+	path = Decrypt9WIP
+	url = https://github.com/d0k3/Decrypt9WIP
