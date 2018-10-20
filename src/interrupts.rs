@@ -131,7 +131,7 @@ pub extern fn handle_irq() {
     }
 }
 
-pub type SwiHandlerFn = fn(u32);
+pub type SwiHandlerFn = fn(u32, bool, &mut [u32; 15]);
 static mut SWI_HANDLER: Option<SwiHandlerFn> = None;
 
 pub fn register_swi_handler(handler: SwiHandlerFn) -> Result<(), &'static str> {
@@ -150,9 +150,9 @@ pub fn unregister_swi_handler() {
 }
 
 #[no_mangle]
-pub extern fn handle_swi(swi_index: u32) {
+pub extern fn handle_swi(swi_index: u32, is_thumb: u32, regs: *mut [u32; 15]) {
     if let Some(h) = unsafe { SWI_HANDLER } {
-        h(swi_index);
+        h(swi_index, is_thumb != 0, unsafe { &mut *regs });
     } else {
         panic!("Handling software interrupt {:02X} failed!", swi_index);
     }

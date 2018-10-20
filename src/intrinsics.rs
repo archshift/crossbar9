@@ -9,6 +9,7 @@ pub fn panic_handler(info: &core::panic::PanicInfo) -> ! {
     log!("{}", info);
 
     log!("Press SELECT to power off.");
+    ::gfx::draw_commit();
     while !::io::hid::buttons_pressed().0[::io::hid::button::SELECT.trailing_zeros() as usize] {}
     ::power::power_off()
 }

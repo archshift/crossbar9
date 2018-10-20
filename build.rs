@@ -42,6 +42,11 @@ fn main() {
 
     gcc_config()
         .flag("-w")
+        .file("src/programs/os/entry.s")
+        .compile("libosasm.a");
+
+    gcc_config()
+        .flag("-w")
         .flag("-fno-strict-aliasing")
         .include("Decrypt9WIP/source/fatfs")
         .include("Decrypt9WIP/source")

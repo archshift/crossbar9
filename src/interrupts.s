@@ -44,7 +44,10 @@ wrap_handle_fiq:
 .type wrap_handle_swi, %function
 .func wrap_handle_swi
 wrap_handle_swi:
-    stmfd sp!, {r0-r3, r12, lr}
+    stmfd sp!, {lr}
+    sub sp, sp, #15*4
+    stmia sp, {r0-r14}^
+    mov r2, sp
 
     mrs r0, spsr
     tst r0, #(1 << 5)
@@ -52,12 +55,17 @@ wrap_handle_swi:
     @ if CPU in thumb state
     ldrneh r0, [lr,#-2]
     bicne r0, r0, #0xFF00
+    movne r1, #1
     @ else
     ldreq r0, [lr,#-4]
     biceq r0, r0, #0xFF000000
+    moveq r1, #0
 
     blx handle_swi
-    ldmfd sp!, {r0-r3, r12, pc}^
+
+    ldmia sp, {r0-r14}^
+    add sp, sp, #15*4
+    ldmfd sp!, {pc}^
 .endfunc
 
 .type wrap_handle_und, %function

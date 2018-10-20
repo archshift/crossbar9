@@ -16,6 +16,10 @@ unsafe fn draw_pixel(fb_addr: u32, pos: (usize, usize), [r, g, b]: [u8;3]) {
     (base_addr as *mut [u8;3]).write_volatile([b, g, r]);
 }
 
+pub fn draw_commit() {
+    ::caches::flush_dcache()
+}
+
 unsafe fn blit_(fb_addr: u32, pos: (usize, usize), bmp: &Bitmap3) {
     for ((x, y), rgb) in bmp.bytes() {
         draw_pixel(fb_addr, (pos.0 + x, pos.1 + y), rgb);

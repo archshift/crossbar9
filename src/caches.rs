@@ -59,3 +59,7 @@ pub fn enable_all() {
         enable_wbuf(true);
     }
 }
+
+pub fn flush_dcache() {
+    unsafe { invalidate_clean_dcache() };
+}
