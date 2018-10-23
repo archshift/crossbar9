@@ -23,13 +23,14 @@ pub mod mem;
 pub mod power;
 pub mod programs;
 pub mod realtime;
+pub mod input;
 
 
 #[no_mangle]
 pub extern fn main() {
     programs::main();
     log!("Press SELECT to power off.");
-    while !io::hid::buttons_pressed().0[io::hid::button::SELECT.trailing_zeros() as usize] {}
+    input::wait_for_all_of(&[io::hid::Button::Select]);
     power::power_off();
 }
 

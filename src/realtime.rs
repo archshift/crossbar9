@@ -30,8 +30,10 @@ impl<'a> Drop for SleepTimer<'a> {
 }
 
 
-pub fn usleep(us: u64) {
-    let timer = unsafe { &*RT_TIMER.expect("Attempted to sleep without initializing timer!") };
+pub fn try_usleep(us: u64) -> Result<(), &'static str> {
+    let timer = unsafe {
+        &*RT_TIMER.ok_or("Attempted to sleep without initializing timer!")?
+    };
 
     let interval = timer.interrupt_interval_us();
     let initial = timer.us_val();
@@ -41,14 +43,17 @@ pub fn usleep(us: u64) {
     }
 
     while (timer.us_val() - initial) < us { }
+    Ok(())
 }
 
-pub fn msleep(ms: u32) {
-    usleep((ms * 1000) as u64);
+pub fn try_msleep(ms: u32) -> Result<(), &'static str> {
+    try_usleep((ms * 1000) as u64)
 }
 
-pub fn sleep(sec: u32) {
-    let timer = unsafe { &*RT_TIMER.expect("Attempted to sleep without initializing timer!") };
+pub fn try_sleep(sec: u32) -> Result<(), &'static str> {
+    let timer = unsafe {
+        &*RT_TIMER.ok_or("Attempted to sleep without initializing timer!")?
+    };
 
     let ms = sec * 1000;
     let interval = timer.interrupt_interval_ms();
@@ -59,4 +64,17 @@ pub fn sleep(sec: u32) {
     }
 
     while (timer.ms_val() - initial) < ms as u64 { }
+    Ok(())
+}
+
+pub fn usleep(us: u64) {
+    try_usleep(us).unwrap()
+}
+
+pub fn msleep(ms: u32) {
+    try_msleep(ms).unwrap()
+}
+
+pub fn sleep(sec: u32) {
+    try_sleep(sec).unwrap()
 }

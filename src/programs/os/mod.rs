@@ -142,9 +142,6 @@ fn setup_program_stack(regs: &mut [u32; 15]) {
     unsafe { (sp_aux_start as *mut u8).write_bytes(0u8, auxc*8) };
     unsafe { *(sp_argc_start as *mut u32) = (argc - 1) as u32 };
 
-    gfx::draw_commit();
-    while !::io::hid::buttons_pressed().0[::io::hid::button::SELECT.trailing_zeros() as usize] {}
-
     regs[13] = sp_argc_start as u32;
     regs[14] = entrypoint;
 }
