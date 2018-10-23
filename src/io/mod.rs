@@ -28,4 +28,6 @@ pub mod ndma;
 pub mod rsa;
 pub mod sdmmc;
 pub mod sha;
+pub mod spi;
+pub mod spi_tsc;
 pub mod timer;
