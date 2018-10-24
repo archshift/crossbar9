@@ -1,0 +1,22 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "lldb",
+            "request": "custom",
+            "name": "Debug executable 'crossbar9'",
+            "sourceLanguages": [
+                "rust",
+            ],
+            "processCreateCommands": [
+                "gdb-remote 4567"
+            ],
+            "targetCreateCommands": [
+                "target create ${workspaceFolder}/target/thumbv5te-none-eabi/debug/crossbar9"
+            ]
+        }
+    ]
+}
