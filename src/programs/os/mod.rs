@@ -22,6 +22,15 @@ extern {
     fn userspace_jmp(addr: u32, args: *const *const u8, env: *const *const u8);
 }
 
+fn patch_got_in_mem(got: &elf::sections::SectionHeader, host_base: *mut u8, guest_base: u32) {
+    let host_base = host_base as u32;
+    let start = ((got.address() as u32) - guest_base + host_base) as *mut u32;
+    let words = (got.size() / 4) as usize;
+    for i in 0..words {
+        unsafe { *start.add(i) += host_base - guest_base };
+    }
+}
+
 fn load_program(fs: &mut fat::Fs, path: &str) {
     let mut file = fs.open(path);
     let size = file.size();
@@ -67,6 +76,10 @@ fn load_program(fs: &mut fat::Fs, path: &str) {
         for b in &mut process[offs + elf_size .. offs + size] {
             *b = 0;
         }
+    }
+
+    if let Some(got) = elf.find_section_by_name(".got") {
+        patch_got_in_mem(&got, &mut process[0], min_addr as u32);
     }
 
     log!("Running at entrypoint {:X}", elf.header.pt2.entry_point());
