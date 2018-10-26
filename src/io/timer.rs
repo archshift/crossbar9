@@ -1,4 +1,4 @@
-use core::intrinsics;
+use core::ptr;
 use core::u16;
 
 use interrupts::{self, HandlerFn};
@@ -37,11 +37,11 @@ bf!(CntReg[u16] {
 
 #[inline(never)]
 fn read_reg(reg: Reg) -> u16 {
-    unsafe { intrinsics::volatile_load((TIMER_BASE + reg as u32) as *const u16) }
+    unsafe { ptr::read_volatile((TIMER_BASE + reg as u32) as *const u16) }
 }
 
 fn write_reg(reg: Reg, val: u16) {
-    unsafe { intrinsics::volatile_store((TIMER_BASE + reg as u32) as *mut u16, val); }
+    unsafe { ptr::write_volatile((TIMER_BASE + reg as u32) as *mut u16, val); }
 }
 
 fn ticks_to_units(num_ticks: u64, prescaler: Prescaler, units_per_second: u32) -> u64 {

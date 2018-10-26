@@ -1,4 +1,3 @@
-use core::intrinsics;
 use core::ptr;
 
 const SHA_BASE: u32 = 0x1000A000u32;
@@ -40,14 +39,20 @@ fn write_reg<T: Copy>(reg: Reg, val: T) {
     unsafe { ptr::write_volatile((SHA_BASE + reg as u32) as *mut T, val); }
 }
 
+unsafe fn volatile_copy(dst: *mut u8, src: *const u8, size: usize) {
+    for i in 0..size {
+        dst.add(i).write_volatile(*src.add(i));
+    }
+}
+
 fn write_fifo<F: Fn()>(reg: Reg, fifo_size: usize, buf: &[u8], sync_fn: F) {
     let mut buf_ptr = buf.as_ptr();
     let mut bytes_remaining = buf.len();
     while bytes_remaining >= fifo_size {
         sync_fn();
         unsafe {
-            intrinsics::volatile_copy_nonoverlapping_memory((SHA_BASE + reg as u32) as *mut u8,
-                                                            buf_ptr, fifo_size);
+            volatile_copy((SHA_BASE + reg as u32) as *mut u8,
+                          buf_ptr, fifo_size);
         }
         bytes_remaining -= fifo_size;
         buf_ptr = unsafe { buf_ptr.offset(fifo_size as isize) };
@@ -56,8 +61,8 @@ fn write_fifo<F: Fn()>(reg: Reg, fifo_size: usize, buf: &[u8], sync_fn: F) {
     if bytes_remaining > 0 {
         sync_fn();
         unsafe {
-            intrinsics::volatile_copy_nonoverlapping_memory((SHA_BASE + reg as u32) as *mut u8,
-                                                            buf_ptr, bytes_remaining);
+            volatile_copy((SHA_BASE + reg as u32) as *mut u8,
+                          buf_ptr, bytes_remaining);
         }
     }
 }

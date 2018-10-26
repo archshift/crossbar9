@@ -1,4 +1,3 @@
-#![feature(core_intrinsics)]
 #![allow(unused_parens)]
 #![deny(warnings)]
 #![no_std]

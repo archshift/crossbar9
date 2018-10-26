@@ -1,4 +1,4 @@
-use core::intrinsics;
+use core::ptr;
 use core::mem;
 
 const AES_BASE: u32 = 0x10009000u32;
@@ -59,19 +59,19 @@ bf!(KeyCntReg[u8] {
 
 #[inline(never)]
 fn read_reg<T: Copy>(reg: Reg) -> T {
-    unsafe { intrinsics::volatile_load((AES_BASE + reg as u32) as *const T) }
+    unsafe { ptr::read_volatile((AES_BASE + reg as u32) as *const T) }
 }
 
 #[inline(never)]
 fn write_reg<T: Copy>(reg: Reg, val: T) {
-    unsafe { intrinsics::volatile_store((AES_BASE + reg as u32) as *mut T, val); }
+    unsafe { ptr::write_volatile((AES_BASE + reg as u32) as *mut T, val); }
 }
 
 #[inline(never)]
 fn write_reg_twlkey<T: Copy>(keyslot: u8, target: TwlKeyReg, val: T) {
     assert!(keyslot < 4);
     let reg = Reg::TWL_KEY0 as u32 + (keyslot as u32) * 0x30;
-    unsafe { intrinsics::volatile_store((AES_BASE + reg + target as u32) as *mut T, val); }
+    unsafe { ptr::write_volatile((AES_BASE + reg + target as u32) as *mut T, val); }
 }
 
 #[derive(Clone, Copy)]

@@ -1,4 +1,4 @@
-use core::intrinsics;
+use core::ptr;
 use core::iter;
 
 const RSA_BASE: u32 = 0x1000B000u32;
@@ -33,12 +33,12 @@ bf!(CntReg[u32] {
 
 #[inline(never)]
 fn read_reg<T: Copy>(reg: Reg) -> T {
-    unsafe { intrinsics::volatile_load((RSA_BASE + reg as u32) as *const T) }
+    unsafe { ptr::read_volatile((RSA_BASE + reg as u32) as *const T) }
 }
 
 #[inline(never)]
 fn write_reg<T: Copy>(reg: Reg, val: T) {
-    unsafe { intrinsics::volatile_store((RSA_BASE + reg as u32) as *mut T, val); }
+    unsafe { ptr::write_volatile((RSA_BASE + reg as u32) as *mut T, val); }
 }
 
 pub fn crypt_2048_opt(key: &[u8], modulus: &[u8], msg: &[u8], little_endian: bool, normal_word_order: bool) -> [u8; 0x100] {
