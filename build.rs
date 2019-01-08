@@ -1,5 +1,7 @@
 extern crate cc;
 
+use std::env;
+
 static ARCH_FLAGS: &[&str] = &["-mthumb-interwork", "-mcpu=arm946e-s", "-msoft-float"];
 
 fn gcc_config() -> cc::Build {
@@ -14,7 +16,7 @@ fn main() {
     println!("cargo:rerun-if-env-changed=C9_PROG_TYPE");
 
     // Make sure the requested program actually exists
-    let prog = env!("C9_PROG_TYPE");
+    let prog = env::var("C9_PROG_TYPE").unwrap();
     let modfile = include_str!("src/programs/mod.rs");
     let start = modfile.find("define_programs!(").unwrap();
     let end = modfile[start..].find(");").unwrap() + start;
