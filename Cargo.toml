@@ -16,6 +16,7 @@ overflow-checks = false
 [dependencies]
 rlibc = "1.0"
 xmas-elf = "0.6"
+u2N = { git = "https://github.com/archshift/u2N" }
 
 [dependencies.bitutils]
 version = "2.0"

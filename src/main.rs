@@ -6,6 +6,7 @@
 #[macro_use]
 extern crate bitutils;
 extern crate rlibc;
+extern crate u2N;
 
 #[macro_use]
 pub mod gfx;
