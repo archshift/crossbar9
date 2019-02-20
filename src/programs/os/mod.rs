@@ -159,19 +159,20 @@ fn setup_program_stack(regs: &mut [u32; 15]) {
     regs[14] = entrypoint;
 }
 
+static mut CURR_TLS: u32 = 0;
 
-fn swi_handler(which: u32, is_thumb: bool, regs: &mut [u32; 15]) {
-    log!("handling swi{:x} from {}", which, if is_thumb { "thumb" } else { "arm" });
+fn swi_handler(which: u32, _is_thumb: bool, regs: &mut [u32; 15]) {
     if which == 1 {
         setup_program_stack(regs);
         return
     }
 
-    log!("syscall#: {:X}, r0: {:#08X}, r1: {:#08X}, r2: {:#08X}, r3: {:#08X}, r4: {:#08X}, r5: {:#08X}", regs[7], regs[0], regs[1], regs[2], regs[3], regs[4], regs[5]);
+    log!("syscall#: {:X}, r0: {:08X}, r1: {:08X}, r2: {:08X}, r3: {:08X}, r4: {:08X}, r5: {:08X}", regs[7], regs[0], regs[1], regs[2], regs[3], regs[4], regs[5]);
     assert!(which == 0);
 
     let syscall = regs[7];
     match syscall {
+        1 => loop {}
         4 => { // Write
             let fd = regs[0];
             let buf = regs[1];
@@ -180,7 +181,56 @@ fn swi_handler(which: u32, is_thumb: bool, regs: &mut [u32; 15]) {
 
             gfx::log(unsafe { from_raw_parts(buf as *const u8, count as usize) });
         }
-        1 => loop {}
+        0xa8 => { // Poll
+            #[repr(C)]
+            struct pollfd {
+                fd: i32,
+                events: i16,
+                revents: i16,
+            }
+
+            const POLLOUT: i16 = 4;
+
+            let fds = regs[0] as *mut pollfd;
+            let num_fds = regs[1] as usize;
+            let _timeout = regs[2];
+
+            for i in 0..num_fds {
+                let polldat = unsafe { &mut *fds.add(i) };
+                match polldat.fd {
+                    0 => polldat.revents |= polldat.events & POLLOUT,
+                    _ => {}
+                }
+            }
+            gfx::draw_commit();
+            ::input::wait_for_all_of(&[::io::hid::Button::Select]);
+        }
+        0x100 => { // Set thread ID address
+            log!("Setting TID address to {:08X}", regs[0]);
+        }
+        0xf0005 => { // Set TLS
+            log!("Setting TLS pointer to {:08X}", regs[0]);
+            unsafe { CURR_TLS = regs[0] };
+        }
+        0xf1000 => { // CUSTOM SYSCALL: Get TLS
+            unsafe { regs[0] = CURR_TLS };
+            log!("Requesting TLS pointer {:08X}", regs[0]);
+        }
+        0xf1001 => { // CUSTOM SYSCALL: Compare Exchange
+            let old = regs[0];
+            let new = regs[1];
+            let ptr = regs[2] as *mut u32;
+            unsafe {
+                if *ptr != old {
+                    regs[0] = !0;
+                } else {
+                    *ptr = new;
+                    regs[0] = 0;
+                }
+            }
+        }
+        0xf1002 => { // CUSTOM SYSCALL: Data/Memory Barrier
+        }
         _ => panic!("Unimplemented syscall {:X}", syscall)
     }
 
