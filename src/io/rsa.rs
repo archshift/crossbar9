@@ -1,5 +1,5 @@
 use core::ptr;
-use core::iter;
+use core::mem;
 
 const RSA_BASE: u32 = 0x1000B000u32;
 
@@ -63,31 +63,29 @@ pub fn crypt_2048_opt(key: &[u8], modulus: &[u8], msg: &[u8], little_endian: boo
     }
 
     { // Copy exponent into FIFO one u32 at a time
-        let remainder = 0x100 - key.len();
-        let mut k_it = iter::repeat(&0u8).take(remainder).chain(key.iter());
-
-        while let (Some(b0), Some(b1), Some(b2), Some(b3))
-                = (k_it.next(), k_it.next(), k_it.next(), k_it.next()) {
-            let word = (*b3 as u32) << 24 | (*b2 as u32) << 16 | (*b1 as u32) << 8 | (*b0 as u32);
-            write_reg::<u32>(Reg::EXPFIFO, word);
+        let mut exp_buf = [0u32; 0x40];
+        unsafe {
+            let exp_buf: &mut [u8; 0x100] = mem::transmute(&mut exp_buf);
+            exp_buf[0x100 - key.len()..].copy_from_slice(key);
         }
+        write_reg(Reg::EXPFIFO, exp_buf);
     }
 
     { // Modulus
-        let mut mod_buf = [0u8; 0x100];
-        mod_buf[..].copy_from_slice(modulus);
+        let mut mod_buf = [0u32; 0x40];
+        unsafe {
+            let mod_buf: &mut [u8; 0x100] = mem::transmute(&mut mod_buf);
+            mod_buf[..].copy_from_slice(modulus);
+        }
         write_reg(Reg::MOD, mod_buf);
     }
 
-    { // Signal keydata updated and ready
-        let mut slot = read_reg::<RegSlot>(Reg::SLOT3);
-        slot.cnt |= 0x1;
-        write_reg(Reg::SLOT3, slot);
-    }
-
     { // Write message/signature
-        let mut msg_buf = [0u8; 0x100];
-        msg_buf[0x100 - msg.len()..0x100].copy_from_slice(msg);
+        let mut msg_buf = [0u32; 0x40];
+        unsafe {
+            let msg_buf: &mut [u8; 0x100] = mem::transmute(&mut msg_buf);
+            msg_buf[0x100 - msg.len()..0x100].copy_from_slice(msg);
+        }
         write_reg(Reg::TXT, msg_buf);
     }
 
