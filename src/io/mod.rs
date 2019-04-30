@@ -57,3 +57,4 @@ pub mod rsa;
 pub mod sdmmc;
 pub mod sha;
 pub mod timer;
+pub mod xdma;

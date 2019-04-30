@@ -22,6 +22,7 @@ define_programs!(
     "sleep" => sleep_timer,
     "sha" => sha_hasher,
     "armwrestler" => armwrestler,
+    "xdma" => xdma,
 
     "os" => os
 );

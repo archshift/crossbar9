@@ -210,8 +210,8 @@ impl<'a> AesContext<'a> {
             if let Some(iv) = iv_ctr {
                 assert!(iv.len() == 0x10);
 
-                let mut iv_it = byte4iter(iv);
-                let mut iv_word_it = iv_words.iter_mut().rev();
+                let iv_it = byte4iter(iv);
+                let iv_word_it = iv_words.iter_mut().rev();
 
                 for (word, bytes4) in iv_word_it.zip(iv_it) {
                     *word = unsafe { mem::transmute(bytes4) };

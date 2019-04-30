@@ -1,4 +1,5 @@
 #![allow(unused_parens)]
+#![allow(unused_attributes)] // Needed because of rustc bug #60050
 #![deny(warnings)]
 #![no_std]
 #![no_main]
