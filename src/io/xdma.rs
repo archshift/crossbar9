@@ -32,7 +32,7 @@ macro_rules! xdmainst {
     (ST) => ([0x08]);
     (STP) => ();
     (STZ) => ([0x0C]);
-    (LP $ctr:expr, $iters:expr) => ([0x20 | ($ctr << 1), $iters]);
+    (LP $ctr:expr, $iters:expr) => ([0x20 | ($ctr << 1), $iters - 1]);
     (LPEND $ctr:expr) => ([0x38 | ($ctr << 2), 0]);
     (GO $chan:expr, $where:expr) => ({
         let b = ($where as u32).to_le_bytes();
@@ -170,22 +170,28 @@ pub fn mem_transfer(src: XdmaSrc, dst: XdmaDst) {
 
     assert_eq!(len, dst_len);
 
-    let lines = len / 1;
-    let chunks = lines / 16;
+    const LINE_SIZE: usize = 8;
+    const BURST_LINES: usize = 16;
+
+    let lines = len / LINE_SIZE;
+    let chunks = lines / BURST_LINES;
+
+    assert_eq!(src as usize % LINE_SIZE, 0, "XDMA source unaligned!");
+    assert_eq!(dst as usize % LINE_SIZE, 0, "XDMA dest unaligned!");
+    
+    assert_eq!(len % (LINE_SIZE * BURST_LINES), 0, "XDMA xfer len is not a multiple of the transfer width!");
 
     let mut ctrl_big = ChannelCtrl::new(0);
     ctrl_big.src_inc.set(1);
-    ctrl_big.src_burst_size.set(0);
-    ctrl_big.src_burst_len.set(15);
+    ctrl_big.src_burst_size.set((LINE_SIZE.trailing_zeros()) as u32);
+    ctrl_big.src_burst_len.set((BURST_LINES - 1) as u32);
     ctrl_big.src_prot.set(0b011);
     ctrl_big.src_cache.set(0b010);
     ctrl_big.dst_inc.set(1);
-    ctrl_big.dst_burst_size.set(0);
-    ctrl_big.dst_burst_len.set(15);
+    ctrl_big.dst_burst_size.set((LINE_SIZE.trailing_zeros()) as u32);
+    ctrl_big.dst_burst_len.set((BURST_LINES - 1) as u32);
     ctrl_big.dst_prot.set(0b011);
     ctrl_big.dst_cache.set(0b010);
-
-    assert!(len % 64 == 0);
 
     let program = xdma_compile! {
         MOV(SAR, (src as u32));
@@ -198,13 +204,11 @@ pub fn mem_transfer(src: XdmaSrc, dst: XdmaDst) {
         END
     };
 
+
+    let mut dmainst = DmaInst::new(0);
     let go = xdma_compile! {
         GO(0, (program.as_ptr() as u32))
     };
-
-
-
-    let mut dmainst = DmaInst::new(0);
     dmainst.inst_b0.set(go[0] as u64);
     dmainst.inst_b1.set(go[1] as u64);
     dmainst.inst_b2.set(go[2] as u64);
@@ -219,18 +223,27 @@ pub fn mem_transfer(src: XdmaSrc, dst: XdmaDst) {
     let mut counter1 = 0x10000;
     while read_reg::<u32>(Reg::DEBUG_STAT) & 1 != 0 {}
     while counter1 != 0 && read_reg::<u32>(Reg::CHANNEL_STAT0) & 0xF != 0 { counter1 -= 1 }
-    
-    let pc = read_reg::<u32>(Reg::CHANNEL_PC0);
-    log!("Final channel PC: {:08X}", pc);
-    log!("Data at channel PC: {:X?}", {
-        let offset = (pc - (program.as_ptr() as u32)) as usize;
-        let buf_size = (program.len() - offset).min(6);
-        &program[offset..offset + buf_size]
-    });
-    log!("Final manager fault type: {:08X}", read_reg::<u32>(Reg::MANAGER_FTYPE));
-    log!("Final channel fault type: {:08X}", read_reg::<u32>(Reg::CHANNEL_FTYPE0));
-    log!("Final channel state: {:08X}", read_reg::<u32>(Reg::CHANNEL_STAT0));
 
-    assert_eq!(read_reg::<u32>(Reg::CHANNEL_FTYPE0), 0,
-               "XDMA channel faulted!");
+
+    let ftype = read_reg::<u32>(Reg::CHANNEL_FTYPE0);
+    if ftype != 0 {
+        let pc = read_reg::<u32>(Reg::CHANNEL_PC0);
+        let failed_inst = {
+            let offset = (pc - (program.as_ptr() as u32)) as usize;
+            let buf_size = (program.len() - offset).min(6);
+            &program[offset..offset + buf_size];
+        };
+
+        panic!(
+            "XDMA channel faulted!\n\
+                Final channel PC: {:08X}\n\
+                Data at channel PC: {:X?}\n\
+                Final manager fault type: {:08X}\n\
+                Final channel fault type: {:08X}\n\
+                Final channel state: {:08X}",
+            pc, failed_inst, ftype,
+            read_reg::<u32>(Reg::CHANNEL_FTYPE0),
+            read_reg::<u32>(Reg::CHANNEL_STAT0)
+        );
+    }
 }
