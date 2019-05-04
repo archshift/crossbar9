@@ -50,22 +50,19 @@ macro_rules! xdmainst {
     }};
 }
 
-macro_rules! rel_upd {
+macro_rules! handle_lp {
     ($loop_rel:expr; LP $ctr:tt $($rest:tt)* ) => ({
         assert!($loop_rel[$ctr].is_none());
         $loop_rel[$ctr] = Some(0);
     });
-    ($loop_rel:expr; $inst_name:ident $($rest:tt)* ) => ({
-        $loop_rel[0].as_mut().map(|x| *x += xdmainst_size!( $inst_name ));
-        $loop_rel[1].as_mut().map(|x| *x += xdmainst_size!( $inst_name ));
-    })
+    ($loop_rel:expr; $($other:tt)*) => {}
 }
 
-macro_rules! lpend {
+macro_rules! handle_lpend {
     ($loop_rel:expr; $inst_buf:expr; LPEND $ctr:tt $($rest:tt)* ) => ({
         assert!($loop_rel[$ctr].is_some());
         let rel = $loop_rel[$ctr].take();
-        $inst_buf[1] = rel.unwrap();
+        $inst_buf[1] = rel.unwrap() - xdmainst_size!(LPEND);
     });
     ($loop_rel:expr; $inst_buf:expr; $($other:tt)*) => {}
 }
@@ -87,8 +84,11 @@ macro_rules! xdma_compile_ {
 
                 arr_sl[..inst_dat.len()].copy_from_slice(&inst_dat);
 
-                lpend!( &mut loop_rel; arr_sl; $inst_name $($inst_param),* ); 
-                rel_upd!( &mut loop_rel; $inst_name $($inst_param),* );
+                loop_rel[0].as_mut().map(|x| *x += xdmainst_size!( $inst_name ));
+                loop_rel[1].as_mut().map(|x| *x += xdmainst_size!( $inst_name ));
+
+                handle_lpend!( &mut loop_rel; arr_sl; $inst_name $($inst_param),* );
+                handle_lp!( &mut loop_rel; $inst_name $($inst_param),* );
 
                 let arr_sl = &mut arr_sl[inst_dat.len()..];
             )+
