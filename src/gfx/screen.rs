@@ -38,6 +38,7 @@ unsafe fn clear_screen_(fb_addr: u32, r: u8, g: u8, b: u8) {
     }
 }
 
+#[inline(never)]
 pub fn clear_screen(r: u8, g: u8, b: u8) {
     unsafe { clear_screen_(top_screen_addr(), r, g, b); }
 }

@@ -99,6 +99,7 @@ macro_rules! xdma_compile_ {
     }}
 }
 
+#[macro_export]
 macro_rules! xdma_compile {
     ( $( $inst_name:ident $(( $($params:tt),* ))* );+ ) => {
         xdma_compile_!( $( [ $inst_name $($($params),*)* ] )* )
@@ -164,47 +165,7 @@ bf!(DmaInst[u64] {
     inst_b5: 56:63
 });
 
-pub fn mem_transfer(src: XdmaSrc, dst: XdmaDst) {
-    let XdmaSrc::LinearBuf(src, len) = src;
-    let XdmaDst::LinearBuf(dst, dst_len) = dst;
-
-    assert_eq!(len, dst_len);
-
-    const LINE_SIZE: usize = 8;
-    const BURST_LINES: usize = 16;
-
-    let lines = len / LINE_SIZE;
-    let chunks = lines / BURST_LINES;
-
-    assert_eq!(src as usize % LINE_SIZE, 0, "XDMA source unaligned!");
-    assert_eq!(dst as usize % LINE_SIZE, 0, "XDMA dest unaligned!");
-    
-    assert_eq!(len % (LINE_SIZE * BURST_LINES), 0, "XDMA xfer len is not a multiple of the transfer width!");
-
-    let mut ctrl_big = ChannelCtrl::new(0);
-    ctrl_big.src_inc.set(1);
-    ctrl_big.src_burst_size.set((LINE_SIZE.trailing_zeros()) as u32);
-    ctrl_big.src_burst_len.set((BURST_LINES - 1) as u32);
-    ctrl_big.src_prot.set(0b011);
-    ctrl_big.src_cache.set(0b010);
-    ctrl_big.dst_inc.set(1);
-    ctrl_big.dst_burst_size.set((LINE_SIZE.trailing_zeros()) as u32);
-    ctrl_big.dst_burst_len.set((BURST_LINES - 1) as u32);
-    ctrl_big.dst_prot.set(0b011);
-    ctrl_big.dst_cache.set(0b010);
-
-    let program = xdma_compile! {
-        MOV(SAR, (src as u32));
-        MOV(CCR, (ctrl_big.val));
-        MOV(DAR, (dst as u32));
-        LP(0, (chunks as u8));
-            LD;
-            ST;
-        LPEND(0);
-        END
-    };
-
-
+pub fn run_program(program: &[u8]) {
     let mut dmainst = DmaInst::new(0);
     let go = xdma_compile! {
         GO(0, (program.as_ptr() as u32))
@@ -246,4 +207,47 @@ pub fn mem_transfer(src: XdmaSrc, dst: XdmaDst) {
             read_reg::<u32>(Reg::CHANNEL_STAT0)
         );
     }
+}
+
+pub fn mem_transfer(src: XdmaSrc, dst: XdmaDst) {
+    let XdmaSrc::LinearBuf(src, len) = src;
+    let XdmaDst::LinearBuf(dst, dst_len) = dst;
+
+    assert_eq!(len, dst_len);
+
+    const LINE_SIZE: usize = 8;
+    const BURST_LINES: usize = 16;
+
+    let lines = len / LINE_SIZE;
+    let chunks = lines / BURST_LINES;
+
+    assert_eq!(src as usize % LINE_SIZE, 0, "XDMA source unaligned!");
+    assert_eq!(dst as usize % LINE_SIZE, 0, "XDMA dest unaligned!");
+    
+    assert_eq!(len % (LINE_SIZE * BURST_LINES), 0, "XDMA xfer len is not a multiple of the transfer width!");
+
+    let mut ctrl_big = ChannelCtrl::new(0);
+    ctrl_big.src_inc.set(1);
+    ctrl_big.src_burst_size.set((LINE_SIZE.trailing_zeros()) as u32);
+    ctrl_big.src_burst_len.set((BURST_LINES - 1) as u32);
+    ctrl_big.src_prot.set(0b011);
+    ctrl_big.src_cache.set(0b010);
+    ctrl_big.dst_inc.set(1);
+    ctrl_big.dst_burst_size.set((LINE_SIZE.trailing_zeros()) as u32);
+    ctrl_big.dst_burst_len.set((BURST_LINES - 1) as u32);
+    ctrl_big.dst_prot.set(0b011);
+    ctrl_big.dst_cache.set(0b010);
+
+    let program = xdma_compile! {
+        MOV(SAR, (src as u32));
+        MOV(CCR, (ctrl_big.val));
+        MOV(DAR, (dst as u32));
+        LP(0, (chunks as u8));
+            LD;
+            ST;
+        LPEND(0);
+        END
+    };
+
+    run_program(&program);
 }

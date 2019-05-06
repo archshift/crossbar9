@@ -1,5 +1,7 @@
 use gfx;
 
+use io::xdma;
+
 #[repr(align(16))]
 struct AlignedBuf([u8; 0x400]);
 
@@ -20,7 +22,6 @@ pub fn main() {
     let buf0 = make_data();
     let mut buf1 = AlignedBuf([0u8; 0x400]);
 
-    use io::xdma;
     xdma::mem_transfer(
         xdma::XdmaSrc::LinearBuf(buf0.0.as_ptr(), buf0.0.len()),
         xdma::XdmaDst::LinearBuf(buf1.0.as_mut_ptr(), buf1.0.len())

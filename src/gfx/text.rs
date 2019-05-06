@@ -54,11 +54,12 @@ pub fn reset_log_cursor() {
     unsafe { CURSOR = (2, 2) };
 }
 
+#[inline(never)]
 pub fn log(string: &[u8]) {
     log_iter(string.iter().map(|x|*x));
 }
 
-pub fn log_iter<I: Iterator<Item = u8>>(it: I) {
+fn log_iter<I: Iterator<Item = u8>>(it: I) {
     let (mut x, mut y) = unsafe { (CURSOR.0, CURSOR.1) };
 
     let newline = |x: &mut usize, y: &mut usize| {
@@ -88,6 +89,7 @@ pub fn log_iter<I: Iterator<Item = u8>>(it: I) {
 pub struct LogWriter;
 
 impl fmt::Write for LogWriter {
+    #[inline(never)]
     fn write_str(&mut self, s: &str) -> Result<(), fmt::Error> {
         log_iter(s.as_bytes().iter().cloned());
         // log_iter(s.chars().flat_map(|c|c.escape_unicode()).map(|c|c as u8));

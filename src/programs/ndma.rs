@@ -9,9 +9,8 @@ fn make_data() -> [u32; 0x200] {
     data
 }
 
-pub fn main() {
-    gfx::clear_screen(0xFF, 0xFF, 0xFF);
-
+#[inline(never)]
+fn test_memory_fill() {
     let mut dst_data = make_data();
 
     print!("Starting NDMA memory fill... ");
@@ -21,30 +20,36 @@ pub fn main() {
 
     let ok = dst_data.iter().all(|word| *word == 0);
     gfx::log(if ok { b"SUCCEEDED!\n" } else { b"FAILED!\n" });
+}
 
-
+#[inline(never)]
+fn test_memory_copy() {
     print!("Starting NDMA memory copy... ");
     let src_data = make_data();
-    dst_data = [0u32; 0x200];
+    let mut dst_data = [0u32; 0x200];
     let src = ndma::NdmaSrc::LinearBuf(src_data.as_ptr(), src_data.len());
     let dst = ndma::NdmaDst::LinearBuf(dst_data.as_mut_ptr(), dst_data.len());
     ndma::mem_transfer(src, dst);
 
     let ok = src_data[..] == dst_data[..];
     gfx::log(if ok { b"SUCCEEDED!\n" } else { b"FAILED!\n" });
+}
 
-
+#[inline(never)]
+fn test_fixedsrc_copy() {
     print!("Starting NDMA memory copy (fixed-src)... ");
     let src_data = 0xF000BAAA;
-    dst_data = [0u32; 0x200];
+    let mut dst_data = [0u32; 0x200];
     let src = ndma::NdmaSrc::FixedAddr(&src_data);
     let dst = ndma::NdmaDst::LinearBuf(dst_data.as_mut_ptr(), dst_data.len());
     ndma::mem_transfer(src, dst);
 
     let ok = dst_data.iter().all(|word| *word == src_data);
     gfx::log(if ok { b"SUCCEEDED!\n" } else { b"FAILED!\n" });
+}
 
-
+#[inline(never)]
+fn test_random_copy() {
     // Shows that NDMA actually loads from memory with each store
     print!("Starting NDMA memory copy (rand-src)... ");
     let mut dst_data = [0u32; 0x500];
@@ -57,4 +62,13 @@ pub fn main() {
     let within_mean_range = |x| x > 0x78000000 && x < 0x88000000;
     let ok = within_mean_range(avg) && !dst_data.iter().cloned().all(within_mean_range);
     gfx::log(if ok { b"SUCCEEDED!\n" } else { b"FAILED!\n" });
+}
+
+pub fn main() {
+    gfx::clear_screen(0xFF, 0xFF, 0xFF);
+
+    test_memory_fill();
+    test_memory_copy();
+    test_fixedsrc_copy();
+    test_random_copy();
 }
