@@ -20,7 +20,7 @@ fi
 
 export CROSS_COMPILE=arm-none-eabi-
 export RUST_TARGET_PATH="$(pwd)"
-rustup run nightly xargo build $RELMODE_FLAG || exit -1
+rustup run nightly cargo xbuild $RELMODE_FLAG || exit -1
 
 TARGET_DIR="./target/${TARGET}/${RELMODE}"
 TARGET_ELF="${TARGET_DIR}/crossbar9"

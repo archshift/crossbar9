@@ -4,6 +4,10 @@
 #![no_std]
 #![no_main]
 
+#![feature(alloc_error_handler)]
+
+extern crate alloc;
+
 #[macro_use]
 extern crate bitutils;
 extern crate rlibc;
@@ -37,3 +41,8 @@ pub extern fn main() {
 
 #[global_allocator]
 static ALLOCATOR: mem::Allocator = mem::Allocator::new();
+
+#[alloc_error_handler]
+extern fn alloc_error(_: core::alloc::Layout) -> ! {
+    panic!("Out of memory!");
+}
