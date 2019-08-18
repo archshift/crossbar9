@@ -5,7 +5,7 @@ use core::mem::{align_of, size_of};
 use core::slice::{from_raw_parts, from_raw_parts_mut};
 use core::ops::{Deref, DerefMut};
 
-use ALLOCATOR as Global;
+pub(crate) use ALLOCATOR as Global;
 
 extern {
     static kernel_phys_end: usize;

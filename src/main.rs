@@ -40,7 +40,7 @@ pub extern fn main() {
 }
 
 #[global_allocator]
-static ALLOCATOR: mem::Allocator = mem::Allocator::new();
+pub(crate) static ALLOCATOR: mem::Allocator = mem::Allocator::new();
 
 #[alloc_error_handler]
 extern fn alloc_error(_: core::alloc::Layout) -> ! {

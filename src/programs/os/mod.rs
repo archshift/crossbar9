@@ -205,6 +205,27 @@ fn swi_handler(which: u32, _is_thumb: bool, regs: &mut [u32; 15]) {
             gfx::draw_commit();
             ::input::wait_for_all_of(&[::io::hid::Button::Select]);
         }
+        0xc0 => { // MMAP2
+            const MAP_ANONYMOUS: u32 = 0x20;
+
+            let addr = regs[0];
+            let len = regs[1];
+            let _prot = regs[2];
+            let flags = regs[3];
+            let fd = regs[4];
+            let pgoff = regs[5];
+            assert!(addr == 0);
+            assert!(fd == !0);
+            assert!(pgoff == 0);
+            assert!(flags & MAP_ANONYMOUS != 0);
+
+            log!("Attempting to map memory of size 0x{:X}", len);
+            if let Ok(ptr) = unsafe { mem::Global.alloc_array(len as usize, 4096) } {
+                regs[0] = ptr.as_ptr() as *mut u8 as u32;
+            } else {
+                regs[0] = 0;
+            }
+        }
         0x100 => { // Set thread ID address
             log!("Setting TID address to {:08X}", regs[0]);
         }
@@ -212,7 +233,7 @@ fn swi_handler(which: u32, _is_thumb: bool, regs: &mut [u32; 15]) {
             log!("Setting TLS pointer to {:08X}", regs[0]);
             unsafe { CURR_TLS = regs[0] };
         }
-        0xf1000 => { // CUSTOM SYSCALL: Get TLS
+        0xf0006 => { // CUSTOM SYSCALL: Get TLS
             unsafe { regs[0] = CURR_TLS };
             log!("Requesting TLS pointer {:08X}", regs[0]);
         }
@@ -246,5 +267,5 @@ pub fn main() {
     interrupts::register_swi_handler(swi_handler).unwrap();
 
     let mut fs = fat::Fs::init();
-    load_program(&mut fs, "/init.bin");
+    load_program(&mut fs, "/init.elf");
 }
