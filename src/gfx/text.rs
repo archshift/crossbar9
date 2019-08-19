@@ -1,6 +1,7 @@
 use core::fmt;
+use alloc::vec::Vec;
 
-use gfx::{Bitmap3, blit, SCREEN_WIDTH, SCREEN_HEIGHT};
+use gfx::{Bitmap3, text_blit, SCREEN_WIDTH, SCREEN_HEIGHT};
 
 static FONT: [u8; 0x2400] = *include_bytes!("font.data");
 
@@ -37,7 +38,7 @@ fn draw_letter(pos: (usize, usize), letter: u8) {
 
     let letter_bmp = FONT_BMP.submap((letter_x, letter_y), letter_size);
 
-    blit(pos, &letter_bmp);
+    text_blit(pos, &letter_bmp, [0x42, 0x09, 0x03]);
 }
 
 pub fn draw_string(pos: (usize, usize), string: &[u8]) {
@@ -48,6 +49,52 @@ pub fn draw_string(pos: (usize, usize), string: &[u8]) {
     }
 }
 
+struct LogPages {
+    text: [ Vec<u8>; 8 ],
+    head: usize,
+    active_page: usize,
+}
+
+impl LogPages {
+    fn new() -> Self {
+        Self {
+            text: [ Vec::new(), Vec::new(), Vec::new(), Vec::new(),
+                    Vec::new(), Vec::new(), Vec::new(), Vec::new() ],
+            head: 0,
+            active_page: 0,
+        }
+    }
+
+    fn flip_to(&mut self, page: usize) {
+        if self.active_page == page {
+            return;
+        }
+        self.active_page = page;
+        let buf = &self.text[ (self.head + page) % self.text.len() ];
+        ::gfx::clear_screen(0xFF, 0xFF, 0xFF);
+        log_iter(buf.iter().copied(), (2, 2), None);
+    }
+
+    fn flip_by(&mut self, direction: isize) {
+        let dst_page = (self.active_page as isize) + direction;
+        if dst_page >= (self.text.len() as isize) || dst_page < 0 {
+            return;
+        }
+        self.flip_to(dst_page as usize);
+    }
+
+    fn push(&mut self, c: u8) {
+        self.text[self.head].push(c);
+    }
+
+    fn add_page(&mut self) {
+        self.head = (self.head + self.text.len() - 1) % self.text.len();
+        self.text[self.head].clear();
+        ::gfx::clear_screen(0xFF, 0xFF, 0xFF);
+    }
+}
+
+static mut LOG_PAGES: Option<LogPages> = None;
 static mut CURSOR: (usize, usize) = (2, 2);
 
 pub fn reset_log_cursor() {
@@ -56,34 +103,72 @@ pub fn reset_log_cursor() {
 
 #[inline(never)]
 pub fn log(string: &[u8]) {
-    log_iter(string.iter().map(|x|*x));
+    unsafe {
+        if let Some(l) = LOG_PAGES.as_mut() {
+            l.flip_to(0);
+        } else {
+            LOG_PAGES = Some(LogPages::new())
+        }
+        let str_it = string.iter().copied();
+        CURSOR = log_iter(str_it, CURSOR, LOG_PAGES.as_mut())
+    };
 }
 
-fn log_iter<I: Iterator<Item = u8>>(it: I) {
-    let (mut x, mut y) = unsafe { (CURSOR.0, CURSOR.1) };
+pub fn log_scroll(direction: isize) {
+    unsafe {
+        if let Some(l) = LOG_PAGES.as_mut() {
+            l.flip_by(direction);
+        }
+    }
+}
 
-    let newline = |x: &mut usize, y: &mut usize| {
+pub fn log_clear() {
+    unsafe {
+        if let Some(l) = LOG_PAGES.as_mut() {
+            l.add_page();
+        }
+    }
+    reset_log_cursor();
+}
+
+fn log_iter<I>(it: I, cursor: (usize, usize), mut dst_pages: Option<&mut LogPages>)
+    -> (usize, usize)
+    where I: Iterator<Item = u8>
+{
+    let (mut x, mut y) = cursor;
+
+    let newline = |x: &mut usize, y: &mut usize, lp: &mut Option<&mut LogPages>| {
         *y += 10;
         *x = 2;
         if *y >= SCREEN_HEIGHT {
             *y = 2;
+
+            if let Some(lp) = lp {
+                lp.add_page();
+            }
         }
     };
 
     for c in it {
         if c == b'\n' {
-            newline(&mut x, &mut y);
+            if let Some(lp) = &mut dst_pages {
+                lp.push(c);
+            }
+            newline(&mut x, &mut y, &mut dst_pages);
         } else {
             if x + 4 >= SCREEN_WIDTH {
-                newline(&mut x, &mut y);
+                newline(&mut x, &mut y, &mut dst_pages);
             }
 
             draw_letter((x, y), c);
             x += 4;
+            if let Some(lp) = &mut dst_pages {
+                lp.push(c);
+            }
         }
     }
 
-    unsafe { CURSOR = (x, y) };
+    (x, y)
 }
 
 pub struct LogWriter;
@@ -91,7 +176,7 @@ pub struct LogWriter;
 impl fmt::Write for LogWriter {
     #[inline(never)]
     fn write_str(&mut self, s: &str) -> Result<(), fmt::Error> {
-        log_iter(s.as_bytes().iter().cloned());
+        log(s.as_bytes());
         // log_iter(s.chars().flat_map(|c|c.escape_unicode()).map(|c|c as u8));
         Ok(())
     }

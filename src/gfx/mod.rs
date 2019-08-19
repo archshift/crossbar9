@@ -5,35 +5,6 @@ mod text;
 pub use self::screen::*;
 pub use self::text::*;
 
-pub struct RgbIter<'a> {
-    slice: &'a [u8],
-    x: usize,
-    y: usize,
-    w: usize,
-    stride: usize,
-}
-
-impl<'a> Iterator for RgbIter<'a> {
-    type Item = ((usize, usize), [u8;3]);
-
-    fn next(&mut self) -> Option<Self::Item> {
-        let xy = (self.x, self.y);
-        let pos = self.y*self.stride + self.x*3;
-
-        if pos >= self.slice.len() {
-            return None
-        }
-
-        self.x += 1;
-        if self.x == self.w {
-            self.x = 0;
-            self.y += 1;
-        }
-
-        Some((xy, [self.slice[pos], self.slice[pos+1], self.slice[pos+2]]))
-    }
-}
-
 pub struct Bitmap3<'a> {
     bytes: &'a [u8],
     rect: (usize, usize),
@@ -57,13 +28,21 @@ impl<'a> Bitmap3<'a> {
         }
     }
 
-    pub fn bytes(&self) -> RgbIter {
-        RgbIter {
-            slice: self.bytes,
-            x: 0,
-            y: 0,
-            w: self.rect.0,
-            stride: self.stride,
+    pub fn foreach_byte<F>(&self, f: F)
+        where F: Fn((usize, usize), [u8;3]) {
+
+        let (w, _h) = self.rect;
+
+        let chunks = self.bytes.chunks(self.stride);
+        for (y, row) in chunks.enumerate() {
+            let mut subpix = row;
+
+            for x in 0..w {
+                f((x, y), [subpix[0], subpix[1], subpix[2]]);
+
+                subpix = &subpix[3..];
+            }
         }
+
     }
 }

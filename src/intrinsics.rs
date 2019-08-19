@@ -2,11 +2,10 @@ use core;
 
 #[panic_handler]
 pub fn panic_handler(info: &core::panic::PanicInfo) -> ! {
-    log!("*** PANIC! Press A to continue...");
-    ::input::wait_for_all_of(&[::io::hid::Button::A]);
+    log!("PANIC PANIC PANIC PANIC PANIC");
+    ::input_barrier();
 
-    ::gfx::clear_screen(0xFF, 0xFF, 0xFF);
-    ::gfx::reset_log_cursor();
+    ::gfx::log_clear();
     
     log!("PANIC PANIC PANIC PANIC PANIC");
     log!("{}", info);
