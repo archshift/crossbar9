@@ -46,9 +46,9 @@ impl Allocator {
 
 unsafe impl GlobalAlloc for Allocator {
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
+        let align_po2 = layout.align().trailing_zeros();
         let mut offset = self.offset.get();
-        let padding = layout.align() - offset & (layout.align() - 1);
-        offset += padding;
+        offset = (offset + layout.align() - 1) >> align_po2 << align_po2;
         let addr = main_mem_start() + offset as u32;
         offset += layout.size();
 
@@ -83,6 +83,10 @@ impl<T> Array<T> {
             size: size,
             alignment: alignment
         }
+    }
+
+    pub fn leak(self) -> &'static mut [T] {
+        unsafe { from_raw_parts_mut(self.ptr.as_ptr(), self.size) }
     }
 }
 
