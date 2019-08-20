@@ -12,6 +12,7 @@ extern crate alloc;
 extern crate bitutils;
 extern crate rlibc;
 extern crate u2N;
+extern crate xmas_elf;
 
 #[macro_use]
 pub mod gfx;
@@ -53,6 +54,13 @@ pub fn input_barrier() {
 
 #[no_mangle]
 pub extern fn main() {
+    unsafe {
+        // Don't allow jumping to anywhere in ITCM
+        for i in 0..0x2000 {
+            *((4*i) as *mut u32) = 0xf7f0a000;
+        }
+    }
+
     programs::main();
     log!("Press SELECT to power off.");
     input::wait_for_all_of(&[io::hid::Button::Select]);

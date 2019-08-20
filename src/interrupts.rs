@@ -131,7 +131,7 @@ pub extern fn handle_irq() {
     }
 }
 
-pub type SwiHandlerFn = fn(u32, bool, &mut [u32; 15]);
+pub type SwiHandlerFn = fn(u32, bool, &mut [u32; 15], &mut u32);
 static mut SWI_HANDLER: Option<SwiHandlerFn> = None;
 
 pub fn register_swi_handler(handler: SwiHandlerFn) -> Result<(), &'static str> {
@@ -150,9 +150,9 @@ pub fn unregister_swi_handler() {
 }
 
 #[no_mangle]
-pub extern fn handle_swi(swi_index: u32, is_thumb: u32, regs: *mut [u32; 15]) {
+pub extern fn handle_swi(swi_index: u32, is_thumb: u32, regs: *mut [u32; 15], pc: *mut u32) {
     if let Some(h) = unsafe { SWI_HANDLER } {
-        h(swi_index, is_thumb != 0, unsafe { &mut *regs });
+        h(swi_index, is_thumb != 0, unsafe { &mut *regs }, unsafe { &mut *pc });
     } else {
         panic!("Handling software interrupt {:02X} failed!", swi_index);
     }
@@ -164,8 +164,21 @@ pub extern fn handle_und(addr: u32) {
 }
 
 #[no_mangle]
-pub extern fn handle_pre() {
-    panic!("Prefetch abort!");
+pub extern fn handle_pre(addr: u32, lr: u32, sp: u32) {
+    use alloc::string::String;
+    use core::slice;
+    use core::fmt::Write;
+
+    let stack = unsafe { slice::from_raw_parts(sp as *mut u32, 6*4) }; 
+    let mut stack_str = String::new();
+    for i in 0..6 {
+        let _ = write!(stack_str, "    {:08X}, {:08X}, {:08X}, {:08X}\n",
+            stack[i*4+0], stack[i*4+1], stack[i*4+2], stack[i*4+3]);
+    }
+    let stack_str = "";
+    let _ = sp;
+
+    panic!("Prefetch abort @ 0x{:X}! lr=0x{:X}, stack=\n{}", addr, lr, stack_str);
 }
 
 #[no_mangle]

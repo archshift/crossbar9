@@ -7,5 +7,6 @@
 userspace_jmp:
     msr cpsr_c, #0b11010000
     svc 1
-    bx lr
+loop:
+    b loop
 .endfunc

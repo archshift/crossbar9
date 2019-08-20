@@ -45,6 +45,7 @@ wrap_handle_fiq:
 .func wrap_handle_swi
 wrap_handle_swi:
     stmfd sp!, {lr}
+    mov r3, sp
     sub sp, sp, #15*4
     stmia sp, {r0-r14}^
     mov r2, sp
@@ -81,6 +82,9 @@ wrap_handle_und:
 .type wrap_handle_pre, %function
 .func wrap_handle_pre
 wrap_handle_pre:
+    mrc p15, 0, r0, c6, c0, 2 @@ Read the instruction fault address register
+    mov r1, lr
+    mov r2, sp
     blx handle_pre
     subs pc, lr, #4
 .endfunc
