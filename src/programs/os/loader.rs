@@ -55,9 +55,15 @@ fn copy_program_sections<'a>(program: &elf::program::ProgramHeader<'a>, buf: &'a
     }
 }
 
+fn resolve_symbol(_name: &str) -> u32 {
+    0
+}
+
 const DT_REL: u32 = 17;
 const DT_RELA: u32 = 7;
-fn do_relocation(elf: &elf::ElfFile, rel_type: u32, rel_table: u32, rel_table_size: u32, symtab: u32, reloc_offs: usize) {
+fn do_relocation(elf: &elf::ElfFile, rel_type: u32, rel_table: u32,
+                 rel_table_size: u32, symtab: u32, reloc_offs: usize)
+{
     let reloc_size = match rel_type {
         DT_REL => 8,
         // Some(DT_RELA) => 12,
@@ -78,12 +84,19 @@ fn do_relocation(elf: &elf::ElfFile, rel_type: u32, rel_table: u32, rel_table_si
             let sym_size = 16;
             let sym_name_idx = elf_mkptr::<u32>(symtab + sym_size * sym, reloc_offs);
             let sym_name = elf.get_dyn_string(*sym_name_idx).unwrap();
-
-            log!("Relocating {} {} at {:08X}, with type {}",
-                if sym != 0 {"symbol"} else {""},
-                if sym != 0 {sym_name} else {""},
-                addr as u32,
-                ty);
+            
+            match ty {
+                //0 => *addr = resolve_symbol(sym_name),
+                // 21 | 22 => *addr += reloc_offs as u32,
+                //23 => unimplemented!(),
+                _ => {
+                    log!("Relocating \"{}\" at {:08X} (currently {:08X}), with type {}",
+                        if sym != 0 {sym_name} else {""},
+                        addr as u32,
+                        *addr,
+                        ty);
+                }
+            }
             
             reloc_entry = reloc_entry.add((reloc_size / 4) as usize);
         }
@@ -94,10 +107,10 @@ fn elf_mkptr<T>(pos: u32, reloc_offs: usize) -> *mut T {
     (pos + reloc_offs as u32) as *mut T
 }
 
-static mut LOADED_BINS: Option<Vec<&'static [u8]>> = None;
+static mut LOADED_BINS: Option<Vec<*mut [u8]>> = None;
 
 #[allow(unconditional_recursion)] // False positive
-pub fn load_elf(fs: &mut fat::Fs, path: &str, load_dst: LoadDst) {
+fn _load_elf(fs: &mut fat::Fs, path: &str, load_dst: LoadDst) -> &'static [u8] {
     let loaded_bins = unsafe {
         if LOADED_BINS.is_some() {
             LOADED_BINS.as_mut().unwrap()
@@ -166,13 +179,14 @@ pub fn load_elf(fs: &mut fat::Fs, path: &str, load_dst: LoadDst) {
         if let Some(rel) = rel {
             do_relocation(&elf, DT_REL, rel, rel_size.unwrap(), symtab.unwrap(), reloc_offs);
         }
-
     }
 
-    // if let Some(got) = elf.find_section_by_name(".got") {
-    //     patch_got_in_mem(&got, &mut process[0], min_addr as u32);
-    // }
+    buf
+}
 
+pub fn load_elf(fs: &mut fat::Fs, path: &str, load_dst: LoadDst) {
+    let elf_buf = _load_elf(fs, path, load_dst);
+    let elf = elf::ElfFile::new(elf_buf).unwrap();
     let entry = elf.header.pt2.entry_point() as u32;
     let arg = [b"init.bin\0".as_ptr(), null()];
     let env = [null()];
