@@ -60,13 +60,8 @@ fn match_hexstr(bytes: &[u8], hex_str: &[u8]) -> bool {
     let mut byte_it = bytes.iter();
     let mut hex_it = hex_str.iter();
     while let (Some(src_byte), Some(top_n), Some(bot_n)) = (byte_it.next(), hex_it.next(), hex_it.next()) {
-        let to_num = |letter: u8| {
-            match letter {
-                b'A'...b'F' => letter - b'A' + 10,
-                b'a'...b'f' => letter - b'a' + 10,
-                b'0'...b'9' => letter - b'0',
-                _ => panic!("Attempted to match invalid hex string!")
-            }
+        let to_num = |c: u8| {
+            (c as char).to_digit(16).unwrap() as u8
         };
         let hex_byte = to_num(*top_n) << 4 | to_num(*bot_n);
         if *src_byte != hex_byte {
