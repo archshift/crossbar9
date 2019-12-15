@@ -133,6 +133,7 @@ pub struct AesContext<'a> {
     key_y: Option<&'a [u8]>,
     input_le: bool,
     output_le: bool,
+    input_rev_words: bool,
     output_rev_words: bool,
     force_dsi_keygen: bool
 }
@@ -146,6 +147,7 @@ impl<'a> AesContext<'a> {
             key_y: None,
             input_le: false,
             output_le: false,
+            input_rev_words: false,
             output_rev_words: false,
             force_dsi_keygen: false
         })
@@ -179,6 +181,10 @@ impl<'a> AesContext<'a> {
         AesContext { output_rev_words: state, ..self }
     }
 
+    pub fn with_input_rev_words(self, state: bool) -> AesContext<'a> {
+        AesContext { input_rev_words: state, ..self }
+    }
+
     pub fn force_dsi_keygen(self, force: bool) -> AesContext<'a> {
         AesContext { force_dsi_keygen: force, ..self }
     }
@@ -190,7 +196,7 @@ impl<'a> AesContext<'a> {
         cnt.out_big_endian.set(!self.output_le as u32);
         cnt.out_normal_order.set(!self.output_rev_words as u32);
         cnt.in_big_endian.set(!self.input_le as u32);
-        cnt.in_normal_order.set(1);
+        cnt.in_normal_order.set(!self.input_rev_words as u32);
         write_reg(Reg::CNT, cnt);
 
         if let Some(key) = self.key {

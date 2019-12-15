@@ -33,6 +33,18 @@ fn reverse_word_bytes<'a>(buf: &'a mut [u8]) {
     }
 }
 
+fn reverse_words(buf: &mut [u8]) {
+    buf.reverse();
+    reverse_word_bytes(buf);
+}
+
+fn reverse_blocks(buf: &mut [u8]) {
+    buf.reverse();
+    for c in buf.chunks_mut(16) {
+        c.reverse();
+    }
+}
+
 fn with_reverse_words<'a>(buf: &'a [u8]) -> impl Iterator<Item = &'a u8> {
     buf.chunks(4).rev().flat_map(|c| c.iter())
 }
@@ -144,7 +156,7 @@ fn test_rev_normkey() {
     let mut ctx = aes::AesContext::new().unwrap()
         .with_normalkey(&rev_key);
 
-    print!("Starting AES-ECB decryption (input-le, normal)... ");
+    print!("Starting AES-CTR decryption (input-le, normal)... ");
     buf.copy_from_slice(ENCRYPTED_CTR);
     reverse_word_bytes(&mut buf);
 
@@ -155,6 +167,25 @@ fn test_rev_normkey() {
     ctx = ctx.with_input_le(true);
     ctx.crypt128(aes::Mode::CTR, aes::Direction::Decrypt, &mut buf[..], Some(&rev_ctr));
     ctx.with_input_le(false);
+    print_ifeq_res(buf.iter(), TEXT.iter());
+
+
+    rev_key.copy_from_slice(NORM_KEY);
+    reverse_words(&mut rev_key);
+
+    print!("Starting AES-CTR decryption (input-rev, normal)... ");
+
+    let mut ctx = aes::AesContext::new().unwrap()
+        .with_normalkey(&rev_key);
+
+    buf.copy_from_slice(ENCRYPTED_CTR);
+    reverse_words(&mut buf);
+    reverse_blocks(&mut buf);
+
+    ctx = ctx.with_input_rev_words(true);
+    ctx.crypt128(aes::Mode::CTR, aes::Direction::Decrypt, &mut buf[..], Some(&IV));
+    ctx.with_input_rev_words(false);
+
     print_ifeq_res(buf.iter(), TEXT.iter());
 }
 
@@ -172,7 +203,7 @@ fn test_rev_keypair() {
     let mut ctx = aes::AesContext::new().unwrap()
         .with_keypair(&rev_key0, &rev_key1);
 
-    print!("Starting AES-ECB decryption (input-le, keypair)... ");
+    print!("Starting AES-CTR decryption (input-le, keypair)... ");
     buf.copy_from_slice(ENCRYPTED_CTR);
     reverse_word_bytes(&mut buf);
 
@@ -200,7 +231,7 @@ pub fn test_twl_keyslot() {
 }
 
 pub fn main() {
-    gfx::clear_screen(0xFF, 0xFF, 0xFF);
+    gfx::clear_screen(0xF4, 0xEA, 0xD5);
 
     test_keypair();
     test_normkey();
