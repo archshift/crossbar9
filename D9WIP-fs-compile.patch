@@ -1,0 +1,12 @@
+diff --git a/source/fatfs/sdmmc.c b/source/fatfs/sdmmc.c
+index 6dab53a..9dda08b 100644
+--- a/source/fatfs/sdmmc.c
++++ b/source/fatfs/sdmmc.c
+@@ -29,7 +29,6 @@
+ #include <malloc.h>
+ #include <stdio.h>
+ #include <unistd.h>
+-#include <dirent.h>
+ #include <errno.h>
+ 
+ #include "sdmmc.h"

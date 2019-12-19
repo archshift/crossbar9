@@ -1,22 +1,27 @@
 #!/bin/bash
+set -euo pipefail
 
 TARGET=thumbv5te-none-eabi
 
-export C9_PROG_TYPE="$1"
-if [ "$1" = "" ]; then
+if [ "$#" -lt 1 ]; then
     export C9_PROG_TYPE="os"
+else
+    export C9_PROG_TYPE="$1"
 fi
 
 echo "Compiling program \"$C9_PROG_TYPE\"..."
 
-RELMODE="$2"
-if [ "$2" = "release" ]; then
+if [ $# = 2 ] && [ "$2" = "release" ]; then
     RELMODE="release"
     RELMODE_FLAG="--release"
 else
     RELMODE="debug"
     RELMODE_FLAG=""
 fi
+
+pushd Decrypt9WIP &>/dev/null
+git apply ../D9WIP-fs-compile.patch &>/dev/null || true
+popd &>/dev/null
 
 export CROSS_COMPILE=arm-none-eabi-
 export RUST_TARGET_PATH="$(pwd)"
