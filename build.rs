@@ -10,6 +10,9 @@ fn gcc_config() -> cc::Build {
         config.flag(flag);
     }
     config
+        .flag("-fno-strict-aliasing")
+        .flag("-std=c11");
+    config
 }
 
 fn main() {
@@ -42,6 +45,8 @@ fn main() {
         .file("src/programs/cache_benchers.s")
         .compile("libtestasm.a");
 
+    println!("cargo:rerun-if-changed=src/programs/os/entry.s");
+
     gcc_config()
         .flag("-w")
         .file("src/programs/os/entry.s")
@@ -49,7 +54,6 @@ fn main() {
 
     gcc_config()
         .flag("-w")
-        .flag("-fno-strict-aliasing")
         .include("Decrypt9WIP/source/fatfs")
         .include("Decrypt9WIP/source")
         .file("Decrypt9WIP/source/fatfs/ff.c")

@@ -1,0 +1,21 @@
+language: rust
+rust:
+  - nightly
+
+cache:
+  apt: true
+  cargo: true
+
+addons:
+  apt:
+    packages:
+      - gcc-arm-none-eabi
+      - libnewlib-arm-none-eabi
+      - python3-cryptography
+
+before_install:
+  - rustup component add rust-src
+  - cargo install cargo-xbuild
+
+script:
+  - ./build.sh
