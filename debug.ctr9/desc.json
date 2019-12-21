@@ -1,5 +1,6 @@
 {
     "entryPoint": "0x23F00000",
+    "entryPoint11": "0xFFFF0000",
     "binFiles": [
         { "bin": "../target/thumbv5te-none-eabi/debug/crossbar9.bin", "vAddr": "0x23F00000" }
     ]

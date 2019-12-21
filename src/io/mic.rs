@@ -27,18 +27,32 @@ pub enum SampleRate {
 }
 
 pub struct Mic<'a> {
+    sample_rate: SampleRate,
     _lease: lease_ty!('a, MicLease)
 }
 
 impl<'a> Mic<'a> {
     pub fn enable(lease: lease_ty!('a, MicLease), sample_rate: SampleRate) -> Mic {
-        write_reg(Reg::CNT, 0xF002u16 | (sample_rate as u16) << 2);
-        Mic {
+        let mut out = Mic {
+            sample_rate,
             _lease: lease
-        }
+        };
+        out.clear_overrun();
+        out
     }
 
-    pub fn curr_data(&self) -> u32 {
-        read_reg(Reg::DATA)
+    pub fn clear_overrun(&mut self) {
+        let mut old_cnt: u16 = read_reg(Reg::CNT);
+        old_cnt &= 0x7000;
+        write_reg(Reg::CNT, old_cnt);
+        write_reg(Reg::CNT, 0xF002u16 | (self.sample_rate as u16) << 2);
+    }
+
+    pub fn curr_data(&self) -> [u32; 8] {
+        let mut out = [0; 8];
+        for i in 0..8 {
+            out[i] = read_reg(Reg::DATA)
+        }
+        out
     }
 }

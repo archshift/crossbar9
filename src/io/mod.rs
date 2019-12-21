@@ -3,8 +3,10 @@ pub mod arbiter {
 
     pub struct MicLease;
     pub struct TimerLease;
+    pub struct SpiLease { pub idx: usize }
 
     pub static mut MIC: RefCell<MicLease> = RefCell::new(MicLease);
+    pub static mut SPI0: RefCell<SpiLease> = RefCell::new(SpiLease { idx: 0 });
     pub static mut TIMER0: RefCell<TimerLease> = RefCell::new(TimerLease);
     pub static mut TIMER1: RefCell<TimerLease> = RefCell::new(TimerLease);
     pub static mut TIMER2: RefCell<TimerLease> = RefCell::new(TimerLease);
@@ -56,5 +58,6 @@ pub mod ndma;
 pub mod rsa;
 pub mod sdmmc;
 pub mod sha;
+pub mod spi;
 pub mod timer;
 pub mod xdma;

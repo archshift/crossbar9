@@ -50,6 +50,12 @@ fn main() {
     gcc_config()
         .flag("-w")
         .flag("-fno-strict-aliasing")
+        .file("src/io/codec.c")
+        .compile("libcodec.a");
+
+    gcc_config()
+        .flag("-w")
+        .flag("-fno-strict-aliasing")
         .include("Decrypt9WIP/source/fatfs")
         .include("Decrypt9WIP/source")
         .file("Decrypt9WIP/source/fatfs/ff.c")
