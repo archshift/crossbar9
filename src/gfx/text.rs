@@ -1,7 +1,7 @@
 use core::fmt;
 use alloc::vec::Vec;
 
-use gfx::{Bitmap3, text_blit, SCREEN_WIDTH, SCREEN_HEIGHT};
+use gfx::{Bitmap3, text_blit, top_screen};
 
 static FONT: [u8; 0x2400] = *include_bytes!("font.data");
 
@@ -136,11 +136,12 @@ fn log_iter<I>(it: I, cursor: (usize, usize), mut dst_pages: Option<&mut LogPage
     where I: Iterator<Item = u8>
 {
     let (mut x, mut y) = cursor;
+    let (screen_w, screen_h) = top_screen().size();
 
     let newline = |x: &mut usize, y: &mut usize, lp: &mut Option<&mut LogPages>| {
         *y += 10;
         *x = 2;
-        if *y >= SCREEN_HEIGHT {
+        if *y >= screen_h {
             *y = 2;
 
             if let Some(lp) = lp {
@@ -156,7 +157,7 @@ fn log_iter<I>(it: I, cursor: (usize, usize), mut dst_pages: Option<&mut LogPage
             }
             newline(&mut x, &mut y, &mut dst_pages);
         } else {
-            if x + 4 >= SCREEN_WIDTH {
+            if x + 4 >= screen_w {
                 newline(&mut x, &mut y, &mut dst_pages);
             }
 

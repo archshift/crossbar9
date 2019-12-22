@@ -60,6 +60,7 @@ pub extern fn main() {
             *((4*i) as *mut u32) = 0xf7f0a000;
         }
     }
+    gfx::init();
 
     programs::main();
     log!("Press SELECT to power off.");

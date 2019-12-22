@@ -24,5 +24,6 @@ define_programs!(
     "armwrestler" => armwrestler,
     "xdma" => xdma,
 
+    "ui" => ui,
     "os" => os
 );

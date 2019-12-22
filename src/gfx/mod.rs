@@ -1,6 +1,7 @@
 mod screen;
 #[macro_use]
 mod text;
+pub mod ui;
 
 pub use self::screen::*;
 pub use self::text::*;
@@ -28,8 +29,8 @@ impl<'a> Bitmap3<'a> {
         }
     }
 
-    pub fn foreach_byte<F>(&self, f: F)
-        where F: Fn((usize, usize), [u8;3]) {
+    pub fn foreach_byte<F>(&self, mut f: F)
+        where F: FnMut((usize, usize), [u8;3]) {
 
         let (w, _h) = self.rect;
 
