@@ -42,6 +42,7 @@ fn main() {
     gcc_config()
         .flag("-w")
         .file("src/programs/armwrestler.s")
+        .file("src/programs/thumbwrestler.s")
         .file("src/programs/cache_benchers.s")
         .compile("libtestasm.a");
 

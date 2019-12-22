@@ -22,8 +22,11 @@ define_programs!(
     "sleep" => sleep_timer,
     "sha" => sha_hasher,
     "armwrestler" => armwrestler,
+    "thumbwrestler" => thumbwrestler,
     "xdma" => xdma,
 
     "ui" => ui,
     "os" => os
 );
+
+mod wrestler_common;
